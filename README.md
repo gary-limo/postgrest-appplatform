@@ -21,8 +21,8 @@ PostgREST is a standalone web server that transforms your PostgreSQL database di
 
 **Components**:
 1. **PostgREST Server** - REST API server (port 3000)
-2. **PostgreSQL Database** - Managed database via App Platform
-3. **Sample Schema** - Example `api.todos` table and `api.todos_stats` view
+2. **PostgreSQL Database** - Dev database via App Platform (production: false)
+3. **Sample Schema** - Example `public.todos` table and `public.todos_stats` view
 
 **Endpoints**:
 - API root at `/` - OpenAPI documentation
@@ -141,20 +141,21 @@ See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for detailed local development 
 PostgREST is configured via environment variables in `.do/app.yaml`:
 
 - `PGRST_DB_URI` - PostgreSQL connection string (auto-configured by App Platform)
-- `PGRST_DB_SCHEMAS` - Database schemas to expose (default: `api`)
-- `PGRST_DB_ANON_ROLE` - Database role for anonymous requests (default: `web_anon`)
+- `PGRST_DB_SCHEMAS` - Database schemas to expose (default: `public`)
+- `PGRST_DB_ANON_ROLE` - Database role for anonymous requests (uses default database user)
 - `PGRST_SERVER_PORT` - Server port (default: `3000`)
 - `PGRST_LOG_LEVEL` - Logging verbosity (default: `info`)
 
 ## Automatic Database Initialization
 
 On deployment, the database is **automatically initialized** with:
-- ✅ `api` schema for your tables and views
-- ✅ `web_anon` role for anonymous API access
-- ✅ Sample `todos` table with example data (for demo purposes)
-- ✅ Sample `todos_stats` view
+- ✅ Sample `todos` table in the `public` schema with example data (for demo purposes)
+- ✅ Sample `todos_stats` view for aggregated statistics
+- ✅ All necessary permissions configured automatically
 
 This happens via a **PRE_DEPLOY job** that runs `config/init.sql` before the PostgREST service starts.
+
+**Note on Schema and Roles**: App Platform dev databases (`production: false`) use the `public` schema and default database user. This template is optimized for these constraints. For production deployments with custom schemas and roles, consider using a full managed PostgreSQL database.
 
 ### Why Sample Data?
 
@@ -179,25 +180,25 @@ To customize the API for your use case:
 
 ```sql
 -- Add to config/init.sql
-CREATE TABLE IF NOT EXISTS api.products (
+CREATE TABLE IF NOT EXISTS public.products (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   price DECIMAL(10,2),
   created_at TIMESTAMP DEFAULT NOW()
 );
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON api.products TO web_anon;
-GRANT USAGE, SELECT ON SEQUENCE api.products_id_seq TO web_anon;
 ```
 
 After deployment, you'll have a `/products` endpoint automatically!
 
 ## Security Considerations
 
-- The default `web_anon` role has limited permissions (see `config/init.sql`)
-- For production, implement JWT authentication (see PostgREST docs)
-- Use PostgreSQL Row-Level Security (RLS) policies for fine-grained access control
-- Consider using environment variables for sensitive configuration
+- The template uses the default database user for API access
+- **⚠️ IMPORTANT**: This configuration is suitable for development/testing only
+- For production:
+  - Use a managed PostgreSQL database with custom roles and schemas
+  - Implement JWT authentication (see [PostgREST Authentication Docs](https://postgrest.org/en/stable/references/auth.html))
+  - Use PostgreSQL Row-Level Security (RLS) policies for fine-grained access control
+  - Restrict API access using App Platform's built-in authentication or a reverse proxy
 
 ## Resources
 
