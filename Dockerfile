@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
+    xz-utils \
     ca-certificates \
     postgresql-client \
     libpq-dev \
