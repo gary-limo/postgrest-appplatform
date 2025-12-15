@@ -1,0 +1,93 @@
+spec:
+  name: postgrest-app
+
+  databases:
+  - name: postgrest-db
+    engine: PG
+    version: "16"
+    production: false
+    size: db-s-1vcpu-1gb
+
+  jobs:
+  - name: db-init
+    kind: PRE_DEPLOY
+    instance_size_slug: apps-s-1vcpu-512mb
+
+    git:
+        repo_clone_url: https://github.com/AppPlatform-Templates/postgrest-appplatform.git
+        branch: main
+
+    dockerfile_path: Dockerfile
+
+    envs:
+      - key: PGHOST
+        value: ${postgrest-db.HOSTNAME}
+      - key: PGPORT
+        value: ${postgrest-db.PORT}
+      - key: PGDATABASE
+        value: ${postgrest-db.DATABASE}
+      - key: PGUSER
+        value: ${postgrest-db.USERNAME}
+      - key: PGPASSWORD
+        value: ${postgrest-db.PASSWORD}
+      - key: PGSSLMODE
+        value: require
+
+    run_command: "psql -f /app/config/init.sql"
+
+  services:
+  - name: postgrest-service
+    # Build from source (Dockerfile in repository root)
+    git:
+        repo_clone_url: https://github.com/AppPlatform-Templates/postgrest-appplatform.git
+        branch: main
+
+    # Container configuration
+    dockerfile_path: Dockerfile
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+
+    # Health check configuration
+    health_check:
+      http_path: /
+      initial_delay_seconds: 40
+      period_seconds: 10
+      timeout_seconds: 3
+      success_threshold: 1
+      failure_threshold: 3
+
+    # Environment variables
+    envs:
+      # PostgreSQL connection (automatically injected by App Platform)
+      - key: PGRST_DB_URI
+        value: ${postgrest-db.DATABASE_URL}
+
+      # Database schema to expose via API
+      - key: PGRST_DB_SCHEMAS
+        value: api
+
+      # Anonymous role for unauthenticated requests
+      - key: PGRST_DB_ANON_ROLE
+        value: web_anon
+
+      # Server configuration
+      - key: PGRST_SERVER_HOST
+        value: "0.0.0.0"
+
+      - key: PGRST_SERVER_PORT
+        value: "3000"
+
+      # Logging level
+      - key: PGRST_LOG_LEVEL
+        value: info
+
+      # Template tracking
+      - key: APPPLAT_BASE_TEMPLATE
+        value: postgrest
+
+      - key: APPPLAT_TEMPLATE_TYPE
+        value: base
+
+      - key: APPPLAT_TEMPLATE_COMMIT_SHA
+        value: ${_self.COMMIT_HASH}
