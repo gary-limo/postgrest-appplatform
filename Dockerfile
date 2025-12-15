@@ -1,7 +1,6 @@
 FROM postgrest/postgrest:v12.2.3
 
-# Install curl for health checks
-USER root
+# Install curl for health checks (base image already runs as root during build)
 RUN apt-get update && apt-get install -y \
     curl \
     postgresql-client \
