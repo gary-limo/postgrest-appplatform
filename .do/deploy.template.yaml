@@ -11,7 +11,7 @@ spec:
   jobs:
   - name: db-init
     kind: PRE_DEPLOY
-    instance_size_slug: apps-s-1vcpu-512mb
+    instance_size_slug: apps-s-1vcpu-0.5gb
 
     git:
         repo_clone_url: https://github.com/AppPlatform-Templates/postgrest-appplatform.git
