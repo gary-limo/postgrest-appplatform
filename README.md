@@ -78,9 +78,11 @@ postgrest-appplatform/
 ### One-Click Deploy
 
 Click the "Deploy to DigitalOcean" button above to deploy instantly with zero configuration.
+This uses the Development mode configuration mentioned below.
 
 ### Deploy via CLI
 
+**Development/Testing** (uses dev database with `public` schema):
 ```bash
 # Clone the repository
 git clone https://github.com/AppPlatform-Templates/postgrest-appplatform.git
@@ -90,7 +92,23 @@ cd postgrest-appplatform
 doctl apps create --spec .do/app.yaml
 ```
 
+**Production** (uses managed database with `api` schema and `anon` role):
+
+**Prerequisites: (⚠️ MUST DO)**
+- Create PostgreSQL: `doctl databases create postgrest-db --engine pg --version 16 --region <region> --size db-s-1vcpu-1gb`
+
+```bash
+# Deploy with production configuration
+doctl apps create --spec .do/production-app.yaml
+```
+
 The database will be **automatically initialized** with a sample schema on first deployment. Your API will be immediately functional with example endpoints!
+
+**Key differences:**
+- **Dev template**: Uses `public` schema, default user, smaller resources
+- **Production template**: Uses `api` schema, dedicated `anon` role, larger resources, better security
+
+See [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md) for working with multiple schemas and advanced configuration.
 
 ### Deploy Your Own Fork
 
@@ -100,41 +118,14 @@ The database will be **automatically initialized** with a sample schema on first
 
 ## Local Development
 
-Run locally using Docker Compose:
-
+**Quick Start:**
 ```bash
 docker-compose up
 ```
 
 Access the API at `http://127.0.0.1:3000`
 
-### Example API Requests
-
-```bash
-# View OpenAPI documentation
-curl http://127.0.0.1:3000/
-
-# Get all todos
-curl http://127.0.0.1:3000/todos
-
-# Get todo statistics
-curl http://127.0.0.1:3000/todos_stats
-
-# Create a new todo
-curl -X POST http://127.0.0.1:3000/todos \
-  -H "Content-Type: application/json" \
-  -d '{"title": "New task", "completed": false}'
-
-# Update a todo
-curl -X PATCH http://127.0.0.1:3000/todos?id=eq.1 \
-  -H "Content-Type: application/json" \
-  -d '{"completed": true}'
-
-# Delete a todo
-curl -X DELETE http://127.0.0.1:3000/todos?id=eq.1
-```
-
-See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for detailed local development instructions.
+**📖 See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)** for complete setup instructions, API examples, troubleshooting, and advanced configuration.
 
 ## Configuration
 

@@ -130,6 +130,42 @@ To create your own schema instead of the sample todos:
    ```
 3. Run your modified script against the production database
 
+## Working with Multiple Schemas
+
+You can create and expose multiple schemas to organize your API:
+
+**1. Create additional schemas:**
+```sql
+CREATE SCHEMA v1;
+CREATE SCHEMA v2;
+CREATE SCHEMA products;
+
+CREATE TABLE v1.users (id SERIAL PRIMARY KEY, name TEXT);
+CREATE TABLE products.items (id SERIAL PRIMARY KEY, name TEXT, price DECIMAL);
+```
+
+**2. Grant permissions to anon role:**
+```sql
+GRANT USAGE ON SCHEMA v1, products TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA v1 TO anon;
+GRANT SELECT ON ALL TABLES IN SCHEMA products TO anon;  -- Read-only
+
+-- Auto-grant for future tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA v1 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon;
+```
+
+**3. Update PostgREST config in `.do/production-app.yaml`:**
+```yaml
+- key: PGRST_DB_SCHEMAS
+  value: "api,v1,v2,products"  # Comma-separated list
+```
+
+**Common patterns:**
+- **API versioning**: `v1`, `v2` schemas → `/v1/users`, `/v2/users`
+- **Logical separation**: `products`, `orders`, `customers` schemas
+- **Mixed permissions**: Some schemas read-only, others full CRUD
+- **Private data**: Schemas NOT in `PGRST_DB_SCHEMAS` are never exposed
+
 ## Security Best Practices
 
 1. **Remove Sample Data**: After testing, remove the sample todos:

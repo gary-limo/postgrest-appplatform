@@ -213,12 +213,7 @@ doctl apps logs <app-id> --type run
 
 2. Monitor database performance in App Platform
 
-3. Increase connection pool size:
-   ```yaml
-   envs:
-     - key: PGRST_DB_POOL
-       value: "20"
-   ```
+3. Increase database connection pool size
 
 ### High memory usage
 
