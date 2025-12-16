@@ -48,7 +48,6 @@ PostgREST is a standalone web server that transforms your PostgreSQL database di
 │                │                    │
 │  ┌─────────────▼─────────────────┐  │
 │  │   Managed PostgreSQL DB       │  │
-│  │   (App Platform Database)     │  │
 │  └───────────────────────────────┘  │
 └─────────────────────────────────────┘
 ```
@@ -68,9 +67,7 @@ postgrest-appplatform/
 ├── start.sh                         # Container startup script
 ├── Makefile                         # Development commands
 ├── README.md                        # Main documentation
-├── PRODUCTION_SETUP.md              # Production database setup guide
-├── LOCAL_DEVELOPMENT.md             # Local development guide
-└── TROUBLESHOOTING.md               # Troubleshooting guide
+└── LOCAL_DEVELOPMENT.md             # Local development guide
 ```
 
 ## Deployment Methods
@@ -108,13 +105,11 @@ The database will be **automatically initialized** with a sample schema on first
 - **Dev template**: Uses `public` schema, default user, smaller resources
 - **Production template**: Uses `api` schema, dedicated `anon` role, larger resources, better security
 
-See [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md) for working with multiple schemas and advanced configuration.
-
 ### Deploy Your Own Fork
 
 1. Fork this repository to your GitHub account
-2. Update `.do/app.yaml` to point to your fork
-3. Deploy using `doctl apps create --spec .do/app.yaml`
+2. Update `.do/app.yaml` or `.do/production-app.yaml` to point to your fork
+3. Deploy using `doctl apps create --spec .do/app.yaml` or `doctl apps create --spec .do/production-app.yaml`
 
 ## Local Development
 
@@ -127,24 +122,14 @@ Access the API at `http://127.0.0.1:3000`
 
 **📖 See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)** for complete setup instructions, API examples, troubleshooting, and advanced configuration.
 
-## Configuration
-
-PostgREST is configured via environment variables in `.do/app.yaml`:
-
-- `PGRST_DB_URI` - PostgreSQL connection string (auto-configured by App Platform)
-- `PGRST_DB_SCHEMAS` - Database schemas to expose (default: `public`)
-- `PGRST_DB_ANON_ROLE` - Database role for anonymous requests (uses default database user)
-- `PGRST_SERVER_PORT` - Server port (default: `3000`)
-- `PGRST_LOG_LEVEL` - Logging verbosity (default: `info`)
-
 ## Automatic Database Initialization
 
 On deployment, the database is **automatically initialized** with:
-- ✅ Sample `todos` table in the `public` schema with example data (for demo purposes)
+- ✅ Sample `todos` table with example data (for demo purposes)
 - ✅ Sample `todos_stats` view for aggregated statistics
 - ✅ All necessary permissions configured automatically
 
-This happens via a **PRE_DEPLOY job** that runs `config/init.sql` before the PostgREST service starts.
+This happens via a **PRE_DEPLOY job** that runs `config/init.sql` or `config/init.production.sql` before the PostgREST service starts.
 
 **Note on Schema and Roles**: App Platform dev databases (`production: false`) use the `public` schema and default database user. This template is optimized for these constraints. For production deployments with custom schemas and roles, consider using a full managed PostgreSQL database.
 
@@ -161,43 +146,17 @@ The sample `todos` table lets you:
 
 To customize the API for your use case:
 
-1. **Edit** `config/init.sql` to add your own tables, views, and functions
+1. **Edit** `config/init.sql` or `config/init.production.sql` to add your own tables, views, and functions
 2. **Keep** the schema and role setup (required for PostgREST)
 3. **Remove or modify** the sample `todos` table as needed
 4. **Commit and push** - the init script runs automatically on every deployment
 5. **Deploy** - PostgREST automatically generates endpoints for your schema
-
-**Example: Add your own table**
-
-```sql
--- Add to config/init.sql
-CREATE TABLE IF NOT EXISTS public.products (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  price DECIMAL(10,2),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-After deployment, you'll have a `/products` endpoint automatically!
-
-## Security Considerations
-
-- The template uses the default database user for API access
-- **⚠️ IMPORTANT**: This configuration is suitable for development/testing only
-- For production:
-  - Use a managed PostgreSQL database with custom roles and schemas
-  - Implement JWT authentication (see [PostgREST Authentication Docs](https://postgrest.org/en/stable/references/auth.html))
-  - Use PostgreSQL Row-Level Security (RLS) policies for fine-grained access control
-  - Restrict API access using App Platform's built-in authentication or a reverse proxy
 
 ## Resources
 
 - [PostgREST Documentation](https://postgrest.org/)
 - [DigitalOcean App Platform Documentation](https://docs.digitalocean.com/products/app-platform/)
 - [App Spec Reference](https://docs.digitalocean.com/products/app-platform/reference/app-spec/)
-- [Production Setup Guide](PRODUCTION_SETUP.md) - Manual setup (if auto-init fails)
-- [Troubleshooting Guide](TROUBLESHOOTING.md)
 - [Local Development Guide](LOCAL_DEVELOPMENT.md)
 
 ## Getting Help
