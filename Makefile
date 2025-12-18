@@ -52,4 +52,4 @@ status: ## Check deployment status
 	@doctl apps list
 
 init-db: ## Reinitialize database
-	docker exec -it postgrest-db psql -U postgres -f /docker-entrypoint-initdb.d/init.sql
+	docker exec -it postgrest-db psql -U postgres -f /init.sql

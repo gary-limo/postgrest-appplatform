@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: postgrest-db
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
@@ -13,11 +13,11 @@ services:
       - ./config/init.sql:/init.sql
     command: >
       bash -c "docker-entrypoint.sh postgres &
-      until pg_isready -U postgres; do sleep 1; done;
-      psql -U postgres -tAc \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'todos');\" | grep -q t || psql -U postgres -f /init.sql;
+      until pg_isready -U ${POSTGRES_USER:-postgres}; do sleep 1; done;
+      psql -U ${POSTGRES_USER:-postgres} -tAc \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'todos');\" | grep -q t || psql -U ${POSTGRES_USER:-postgres} -f /init.sql;
       wait"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,12 +30,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/postgres
-      - PGRST_DB_SCHEMAS=public
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_SERVER_HOST=0.0.0.0
-      - PGRST_SERVER_PORT=3000
-      - PGRST_LOG_LEVEL=info
+      - PGRST_DB_URI=${PGRST_DB_URI:-postgres://postgres:postgres@postgres:5432/postgres}
+      - PGRST_DB_SCHEMAS=${PGRST_DB_SCHEMAS:-public}
+      - PGRST_DB_ANON_ROLE=${PGRST_DB_ANON_ROLE:-postgres}
+      - PGRST_SERVER_HOST=${PGRST_SERVER_HOST:-0.0.0.0}
+      - PGRST_SERVER_PORT=${PGRST_SERVER_PORT:-3000}
+      - PGRST_LOG_LEVEL=${PGRST_LOG_LEVEL:-info}
     depends_on:
       postgres:
         condition: service_healthy

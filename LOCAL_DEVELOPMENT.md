@@ -7,14 +7,22 @@ Run PostgREST locally for development and testing.
 ```bash
 git clone https://github.com/AppPlatform-Templates/postgrest-appplatform.git
 cd postgrest-appplatform
+
+# Optional: Customize credentials
+cp .env.example .env
+# Edit .env with your preferred credentials
+
+# Start services
 docker-compose up
 ```
 
 **Access**:
 - API: http://127.0.0.1:3000
-- PostgreSQL: 127.0.0.1:5432 (user: `postgres`, password: `postgres`)
+- PostgreSQL: 127.0.0.1:5432 (default: user `postgres`, password `postgres`)
 
 The database initializes automatically using `config/init.sql` with sample `todos` data.
+
+**Using Custom Credentials**: Create a `.env` file from `.env.example` and set your own database credentials. All values have defaults, so `.env` is optional for local development.
 
 ## API Examples
 

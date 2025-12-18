@@ -7,4 +7,4 @@ echo "Database Schema: ${PGRST_DB_SCHEMAS:-public}"
 echo "Server Port: ${PGRST_SERVER_PORT:-3000}"
 
 # Start PostgREST with configuration
-exec postgrest /config/postgrest.conf
+exec postgrest /app/config/postgrest.conf

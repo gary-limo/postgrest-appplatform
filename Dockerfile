@@ -9,12 +9,12 @@ RUN apt-get update && apt-get install -y \
     xz-utils \
     ca-certificates \
     postgresql-client \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PostgREST
+ARG POSTGREST_VERSION=12.2.3
 RUN wget -O /tmp/postgrest.tar.xz \
-    https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz \
+    https://github.com/PostgREST/postgrest/releases/download/v${POSTGREST_VERSION}/postgrest-v${POSTGREST_VERSION}-linux-static-x64.tar.xz \
     && tar -xJf /tmp/postgrest.tar.xz -C /usr/local/bin/ \
     && rm /tmp/postgrest.tar.xz \
     && chmod +x /usr/local/bin/postgrest
@@ -22,9 +22,8 @@ RUN wget -O /tmp/postgrest.tar.xz \
 # Create app directory for config files
 WORKDIR /app
 
-# Copy configuration files
+# Copy configuration files directly to /config
 COPY config/ /app/config/
-RUN mkdir -p /config && cp /app/config/postgrest.conf /config/postgrest.conf
 
 # Create a startup script
 COPY start.sh /start.sh

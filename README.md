@@ -44,6 +44,10 @@ Your API will be immediately functional with example endpoints at `/welcome`, `/
 ## Local Development
 
 ```bash
+# Optional: Create .env file for custom credentials
+cp .env.example .env
+
+# Start services
 docker-compose up
 # Access API at http://127.0.0.1:3000
 ```
