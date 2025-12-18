@@ -41,12 +41,14 @@ CREATE TABLE IF NOT EXISTS api.todos (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insert sample data (idempotent - won't create duplicates)
-INSERT INTO api.todos (title, completed) VALUES
+-- Insert sample data only if table is empty (prevents duplicates on redeployment)
+INSERT INTO api.todos (title, completed)
+SELECT * FROM (VALUES
   ('Learn PostgREST', false),
   ('Deploy to App Platform', false),
   ('Build amazing APIs', false)
-ON CONFLICT DO NOTHING;
+) AS v
+WHERE NOT EXISTS (SELECT 1 FROM api.todos);
 
 -- Create views in the api schema
 CREATE OR REPLACE VIEW api.todos_stats AS

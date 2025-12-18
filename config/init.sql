@@ -26,12 +26,14 @@ CREATE TABLE IF NOT EXISTS public.todos (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insert sample data (idempotent - won't create duplicates)
-INSERT INTO public.todos (title, completed) VALUES
+-- Insert sample data only if table is empty (prevents duplicates on redeployment)
+INSERT INTO public.todos (title, completed)
+SELECT * FROM (VALUES
   ('Learn PostgREST', false),
   ('Deploy to App Platform', false),
   ('Build amazing APIs', false)
-ON CONFLICT DO NOTHING;
+) AS v
+WHERE NOT EXISTS (SELECT 1 FROM public.todos);
 
 -- Create a sample view
 CREATE OR REPLACE VIEW public.todos_stats AS
