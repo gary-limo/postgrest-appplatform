@@ -14,7 +14,6 @@ databases:
     engine: PG
     version: "16"
     production: false
-    size: db-s-1vcpu-1gb
 
 jobs:
   - name: db-init

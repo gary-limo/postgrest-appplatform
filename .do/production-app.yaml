@@ -17,7 +17,6 @@ databases:
   engine: PG
   version: "16"
   production: true
-  size: db-s-1vcpu-1gb
   cluster_name: postgrest-db
 
 jobs:
