@@ -43,6 +43,8 @@ Your API will be immediately functional with example endpoints at `/welcome`, `/
 
 **Production features**: Autoscaling (1-3 instances), dedicated `api` schema, `anon` role for security.
 
+**To customize**: Fork this repo, update the repo reference in your chosen template (`.do/` folder) to point to your fork, then deploy.
+
 ## Local Development
 
 ```bash
