@@ -98,3 +98,22 @@ services:
 
     - key: PGRST_LOG_LEVEL
       value: info
+
+- name: frontend
+  github:
+      repo: gary-limo/postgrest-appplatform
+      branch: main
+      deploy_on_push: true
+
+  source_dir: frontend
+  
+  build_command: npm install && npm run build
+  run_command: npm start
+  
+  http_port: 3000
+  instance_size_slug: apps-d-1vcpu-1gb
+
+  envs:
+    # Backend URL for Next.js rewrites (internal service)
+    - key: POSTGREST_INTERNAL_URL
+      value: http://postgrest-service:3000
