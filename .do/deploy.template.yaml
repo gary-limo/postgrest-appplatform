@@ -17,7 +17,7 @@ spec:
     instance_size_slug: apps-s-1vcpu-0.5gb
 
     git:
-        repo_clone_url: https://github.com/gary-limo/postgre.git
+        repo_clone_url: https://github.com/gary-limo/postgrest-appplatform.git
         branch: main
 
     dockerfile_path: Dockerfile
@@ -42,7 +42,7 @@ spec:
   - name: postgrest-service
     # Build from source (Dockerfile in repository root)
     git:
-        repo_clone_url: https://github.com/gary-limo/postgre.git
+        repo_clone_url: https://github.com/gary-limo/postgrest-appplatform.git
         branch: main
 
     # Container configuration

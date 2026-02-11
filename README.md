@@ -26,8 +26,8 @@ A production-ready H1B visa wages data explorer powered by [PostgREST](https://p
 ### Local Development
 
 ```bash
-git clone https://github.com/gary-limo/postgre.git
-cd postgre
+git clone https://github.com/gary-limo/postgrest-appplatform.git
+cd postgrest-appplatform
 
 # Start PostgREST + PostgreSQL
 docker-compose up
