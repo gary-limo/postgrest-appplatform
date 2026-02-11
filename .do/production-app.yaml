@@ -26,7 +26,7 @@ jobs:
   instance_size_slug: apps-s-1vcpu-0.5gb
 
   github:
-      repo: AppPlatform-Templates/postgrest-appplatform
+      repo: gary-limo/postgre
       branch: main
       deploy_on_push: true
 
@@ -52,7 +52,7 @@ services:
 - name: postgrest-service
   # Build from source (Dockerfile in repository root)
   github:
-      repo: AppPlatform-Templates/postgrest-appplatform
+      repo: gary-limo/postgre
       branch: main
       deploy_on_push: true
 

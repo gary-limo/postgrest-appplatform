@@ -22,11 +22,19 @@ export interface H1BStats {
   max_wage_from: number;
 }
 
+export interface StateStats {
+  state_code: string;
+  filing_count: number;
+  employer_count: number;
+  avg_wage: number;
+}
+
 export interface SearchFilters {
   employer_name?: string;
   job_title?: string;
   soc_code?: string;
   worksite_address?: string;
+  state_code?: string; // 2-letter state code for precise state-level filtering
   pw_wage_level?: string;
   wage_min?: number;
   wage_max?: number;

@@ -20,44 +20,37 @@ docker-compose up
 - API: http://127.0.0.1:3000
 - PostgreSQL: 127.0.0.1:5432 (default: user `postgres`, password `postgres`)
 
-The database initializes automatically using `config/init.sql` with sample `todos` data.
+The database schema initializes automatically using `config/init.sql`.
+
+After services are up, load the H1B data:
+```bash
+psql -h localhost -U postgres -d postgres -f config/load_h1b_data.sql
+```
 
 **Using Custom Credentials**: Create a `.env` file from `.env.example` and set your own database credentials. All values have defaults, so `.env` is optional for local development.
 
-## API Examples
+## API Examples (READ-ONLY)
 
-**View API guide**:
+All endpoints are read-only. POST, PATCH, and DELETE are disabled at the database level.
+
+**H1B data (paginated)**:
 ```bash
-curl http://127.0.0.1:3000/welcome
+curl "http://127.0.0.1:3000/h1b_lca_data?limit=5&order=wage_rate_of_pay_from.desc"
 ```
 
-**List all todos**:
+**Aggregate statistics**:
 ```bash
-curl http://127.0.0.1:3000/todos
+curl http://127.0.0.1:3000/h1b_lca_stats
 ```
 
-**Create a todo**:
+**Search employers**:
 ```bash
-curl -X POST http://127.0.0.1:3000/todos \
-  -H "Content-Type: application/json" \
-  -d '{"title":"New task","completed":false}'
+curl "http://127.0.0.1:3000/h1b_distinct_employers?employer_name=ilike.*GOOGLE*&order=filing_count.desc&limit=10"
 ```
 
-**Update a todo**:
+**State-level stats**:
 ```bash
-curl -X PATCH "http://127.0.0.1:3000/todos?id=eq.1" \
-  -H "Content-Type: application/json" \
-  -d '{"completed":true}'
-```
-
-**Delete a todo**:
-```bash
-curl -X DELETE "http://127.0.0.1:3000/todos?id=eq.1"
-```
-
-**Get statistics**:
-```bash
-curl http://127.0.0.1:3000/todos_stats
+curl "http://127.0.0.1:3000/h1b_state_stats?order=filing_count.desc"
 ```
 
 **OpenAPI docs**: http://127.0.0.1:3000/
@@ -77,6 +70,7 @@ psql -h 127.0.0.1 -U postgres -d postgres
 **Modify database schema**:
 1. Edit `config/init.sql`
 2. Rebuild: `docker-compose down -v && docker-compose up`
+3. Reload data: `psql -h localhost -U postgres -d postgres -f config/load_h1b_data.sql`
 
 **Modify PostgREST config**:
 1. Edit `config/postgrest.conf` or `docker-compose.yml`

@@ -124,6 +124,7 @@ export function SearchFilters({
             fetchSuggestions={fetchJobSuggestions}
             queryKeyPrefix={`suggest-jobtitle-${currentEmployer || "all"}`}
             showAllOnFocus={!!currentEmployer}
+            dropdownLabel="roles"
           />
         </div>
 
@@ -148,6 +149,7 @@ export function SearchFilters({
             fetchSuggestions={fetchLocationSuggestions}
             queryKeyPrefix={`suggest-location-${currentEmployer || "all"}`}
             showAllOnFocus={!!currentEmployer}
+            dropdownLabel="locations"
           />
         </div>
 

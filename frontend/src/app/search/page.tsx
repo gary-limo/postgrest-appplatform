@@ -4,14 +4,14 @@ import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getH1BData } from "@/lib/api";
-import { detectStateInQuery } from "@/lib/states";
+import { detectStateInQuery, ABBREV_TO_NAME } from "@/lib/states";
 import { SearchFilters } from "@/components/search-filters";
 import { DataTable } from "@/components/data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
+import { ChevronDown, ChevronUp, Lightbulb, MapPin, X } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -55,6 +55,9 @@ function SearchPageContent() {
   const [showFilters, setShowFilters] = useState(true);
 
   // Initialize from URL params
+  // The `state` param uses the same regex logic as h1b_state_stats for precise matching
+  const stateCode = searchParams.get("state") || "";
+
   const [filters, setFilters] = useState<FilterState>(() => ({
     employer_name: searchParams.get("employer") || "",
     job_title: searchParams.get("job") || "",
@@ -76,10 +79,13 @@ function SearchPageContent() {
   );
 
   // Build API query
+  // If a `state` param is provided, use the precise state_code regex filter
+  // (same regex as h1b_state_stats view) instead of a loose ilike location match
   const apiFilters = {
     employer_name: filters.employer_name || undefined,
     job_title: filters.job_title || undefined,
-    worksite_address: filters.location || undefined,
+    worksite_address: (!stateCode && filters.location) ? filters.location : undefined,
+    state_code: stateCode || undefined,
     pw_wage_level: filters.pw_wage_level || undefined,
     wage_min: filters.wage_min ? parseInt(filters.wage_min) : undefined,
     wage_max: filters.wage_max ? parseInt(filters.wage_max) : undefined,
@@ -110,6 +116,7 @@ function SearchPageContent() {
   // Update URL when filters change (debounced)
   const updateURL = useCallback(() => {
     const params = new URLSearchParams();
+    if (stateCode) params.set("state", stateCode);
     if (searchQuery) params.set("q", searchQuery);
     if (filters.employer_name) params.set("employer", filters.employer_name);
     if (filters.job_title) params.set("job", filters.job_title);
@@ -122,7 +129,7 @@ function SearchPageContent() {
     }
     const qs = params.toString();
     router.replace(`/search${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [searchQuery, filters, sortField, sortDirection, router]);
+  }, [stateCode, searchQuery, filters, sortField, sortDirection, router]);
 
   useEffect(() => {
     const timer = setTimeout(updateURL, 500);
@@ -184,6 +191,30 @@ function SearchPageContent() {
             />
           </CardContent>
         </Card>
+      )}
+
+      {/* Active state filter banner (from Map → "View all filings in State") */}
+      {stateCode && (
+        <div className="flex items-center gap-3 rounded-xl border border-[#1B2A4A]/20 bg-[#1B2A4A]/5 px-4 py-3">
+          <MapPin className="h-5 w-5 text-[#C41E3A] shrink-0" />
+          <div className="flex-1 text-sm text-[#1B2A4A]">
+            Showing filings for state:{" "}
+            <span className="font-bold">
+              {ABBREV_TO_NAME[stateCode.toUpperCase()] || stateCode} ({stateCode.toUpperCase()})
+            </span>
+            <span className="text-muted-foreground ml-1.5">
+              — using precise state code matching
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-muted-foreground hover:text-[#C41E3A]"
+            onClick={() => router.replace("/search", { scroll: false })}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       )}
 
       <Separator className="bg-[#E0DCD4]" />

@@ -21,6 +21,8 @@ interface AutocompleteInputProps {
    * Also adds a dropdown chevron icon.
    */
   showAllOnFocus?: boolean;
+  /** Label used in the dropdown header/loading text (e.g. "roles", "locations"). Defaults to "items". */
+  dropdownLabel?: string;
 }
 
 export function AutocompleteInput({
@@ -33,6 +35,7 @@ export function AutocompleteInput({
   minChars = 2,
   debounceMs = 300,
   showAllOnFocus = false,
+  dropdownLabel = "items",
 }: AutocompleteInputProps) {
   const [inputValue, setInputValue] = useState(value);
   const [debouncedValue, setDebouncedValue] = useState("");
@@ -246,15 +249,14 @@ export function AutocompleteInput({
           {isFetching && suggestions.length === 0 ? (
             <li className="px-3 py-2.5 text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin" />
-              {showAllOnFocus ? "Loading roles..." : "Searching..."}
+              {showAllOnFocus ? `Loading ${dropdownLabel}...` : "Searching..."}
             </li>
           ) : (
             <>
               {/* Header when showing all items in combo-box mode */}
               {showAllOnFocus && !inputValue && (
                 <li className="px-3 py-1.5 text-xs text-muted-foreground bg-[#FAF7F0] border-b border-[#E0DCD4] sticky top-0">
-                  Top {suggestions.length} roles by filing count — type to
-                  filter
+                  {suggestions.length} {dropdownLabel} available — type to filter
                 </li>
               )}
               {suggestions.map((suggestion, index) => (

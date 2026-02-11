@@ -66,7 +66,7 @@ export default function HomePage() {
             <p className="text-lg text-blue-100/80 max-w-2xl mx-auto leading-relaxed">
               Search and explore H1B visa salary data across{" "}
               <span className="text-[#C4A35A] font-semibold">450,000+</span> LCA
-              records. Find wages by company, job title, and location.
+              records. Find wages by company, job title.
             </p>
             <div className="max-w-2xl mx-auto pt-2">
               <SearchBar size="large" />
@@ -131,8 +131,8 @@ export default function HomePage() {
           <AlertTriangle className="h-4 w-4 text-[#C4A35A] shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground leading-relaxed">
             <span className="font-semibold text-[#1B2A4A]">Disclaimer:</span>{" "}
-            Data is directly sourced from LCA / U.S. Department of Labor disclosure files.
-            Some figures may be incorrect due to manual data entry errors by employers.
+            Data is sourced from the U.S. Department of Labor disclosure files.
+            Some figures may not be accurate.
             This information is for reference purposes only.
           </p>
         </div>

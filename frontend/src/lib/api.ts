@@ -1,4 +1,4 @@
-import { H1BRecord, H1BStats, SearchFilters } from "./types";
+import { H1BRecord, H1BStats, StateStats, SearchFilters } from "./types";
 import { expandLocationSearch } from "./states";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -108,6 +108,11 @@ export async function getH1BData(
       orClauses.push(locationOr);
     }
   }
+  // Precise state-level filter using the same regex as h1b_state_stats view
+  if (filters.state_code) {
+    // Use POSIX regex match: 2-letter state code before a 5-digit ZIP
+    params["worksite_address"] = `match..*\\s${filters.state_code}\\s\\d{5}`;
+  }
   if (filters.pw_wage_level) {
     params["pw_wage_level"] = `eq.${filters.pw_wage_level}`;
   }
@@ -185,6 +190,34 @@ export async function getTopEmployers(
 }
 
 /**
+ * Fetch H1B filing stats aggregated by US state.
+ */
+export async function getStateStats(): Promise<StateStats[]> {
+  const result = await fetchAPI<StateStats[]>("/h1b_state_stats", {
+    order: "filing_count.desc",
+  });
+  return result.data;
+}
+
+/**
+ * Fetch top employers in a specific state using the same regex as h1b_state_stats.
+ * Uses POSIX regex match to ensure state_code is the 2-letter code before ZIP.
+ */
+export async function getStateEmployers(
+  stateCode: string,
+  limit: number = 20
+): Promise<H1BRecord[]> {
+  const result = await fetchAPI<H1BRecord[]>("/h1b_lca_data", {
+    select:
+      "id,employer_name,job_title,worksite_address,wage_rate_of_pay_from,pw_wage_level",
+    worksite_address: `match..*\\s${stateCode}\\s\\d{5}`,
+    order: "wage_rate_of_pay_from.desc",
+    limit: String(limit),
+  });
+  return result.data;
+}
+
+/**
  * Fetch employer name suggestions from the DISTINCT view.
  * Uses /h1b_distinct_employers which returns pre-deduplicated results
  * so every row is a unique employer — no client-side deduplication needed.
@@ -225,7 +258,9 @@ export async function getJobTitleSuggestions(
   const params: Record<string, string> = {
     select: "job_title",
     order: "filing_count.desc",
-    limit: employerName ? "25" : "15",
+    // When scoped to an employer, return ALL roles (no limit)
+    // When unscoped, cap at 15 to keep suggestions concise
+    ...(!employerName && { limit: "15" }),
   };
 
   if (search) {
@@ -260,13 +295,12 @@ export async function getLocationSuggestions(
   // Without an employer, require at least 2 chars
   if (!employerName && (!search || search.length < 2)) return [];
 
-  // No search term and employer provided → return top locations for employer
+  // No search term and employer provided → return ALL locations for employer
   if (!search && employerName) {
     const params: Record<string, string> = {
       select: "worksite_address",
       employer_name: `ilike.*${employerName}*`,
       order: "filing_count.desc",
-      limit: "25",
     };
 
     const result = await fetchAPI<{ worksite_address: string }[]>(

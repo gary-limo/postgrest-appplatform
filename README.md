@@ -1,87 +1,98 @@
-# PostgREST on DigitalOcean App Platform
+# H1B LCA Wages Data — PostgREST on DigitalOcean App Platform
 
-A production-ready template for deploying [PostgREST](https://postgrest.org) on DigitalOcean App Platform. Automatically generates a RESTful API from your PostgreSQL database schema.
+A production-ready H1B visa wages data explorer powered by [PostgREST](https://postgrest.org) on DigitalOcean App Platform. Automatically generates a read-only RESTful API from PostgreSQL.
 
-[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/AppPlatform-Templates/postgrest-appplatform/tree/main)
+## Architecture
 
-## What is PostgREST?
+- **Backend**: PostgREST (auto-generated REST API from PostgreSQL schema)
+- **Frontend**: Next.js (App Router, SSR, Tailwind CSS, shadcn/ui, Recharts)
+- **Database**: PostgreSQL 16 with pre-computed aggregation tables
+- **Security**: All write operations (POST, PATCH, DELETE) are disabled at the database level
 
-PostgREST transforms your PostgreSQL database directly into a RESTful API. The database schema and permissions define the API endpoints automatically - no backend code required.
+## API Endpoints (READ-ONLY)
 
-**Use Cases**: Rapid API development, database-first architecture, lightweight data layer for microservices.
-
-**What's Included**:
-- PostgREST Server (automatic REST API generation)
-- PostgreSQL Database (managed by App Platform)
-- Sample `todos` table with working endpoints (`/welcome`, `/todos`, `/todos_stats`)
+| Endpoint | Description |
+|---|---|
+| `GET /h1b_lca_data` | H1B LCA data (~451K records, paginated) |
+| `GET /h1b_lca_stats` | Aggregate statistics (1 row, pre-computed) |
+| `GET /h1b_distinct_employers` | Distinct employers with filing counts |
+| `GET /h1b_distinct_jobs` | Distinct job titles per employer |
+| `GET /h1b_distinct_locations` | Distinct locations per employer |
+| `GET /h1b_state_stats` | State-level filing aggregation |
+| `GET /` | OpenAPI documentation |
 
 ## Quick Start
 
-### One-Click Deploy
+### Local Development
 
-Click the **Deploy to DigitalOcean** button above for instant deployment with sample data.
-
-### Deploy via CLI
-
-**Development** (includes dev database with sample data):
 ```bash
-git clone https://github.com/AppPlatform-Templates/postgrest-appplatform.git
-cd postgrest-appplatform
-doctl apps create --spec .do/app.yaml
+git clone https://github.com/gary-limo/postgre.git
+cd postgre
+
+# Start PostgREST + PostgreSQL
+docker-compose up
+
+# Load H1B data (in a separate terminal)
+psql -h localhost -U postgres -d postgres -f config/load_h1b_data.sql
+
+# Start frontend (in a separate terminal)
+cd frontend && npm install && npm run dev
 ```
 
-**Production** (uses your existing database with autoscaling):
-```bash
-# 1. Create a PostgreSQL database
-doctl databases create postgrest-db --engine pg --version 16 --region nyc3 --size db-s-1vcpu-1gb
+- API: http://127.0.0.1:3000
+- Frontend: http://localhost:3001
 
-# 2. Deploy the app
+See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for more details.
+
+### Production Deployment
+
+**Step 1: Create a PostgreSQL database**
+```bash
+doctl databases create postgrest-db --engine pg --version 16 --region nyc3 --size db-s-1vcpu-1gb
+```
+
+**Step 2: Update `.do/production-app.yaml`**
+- Ensure `repo` points to your GitHub repository
+- Ensure `branch` is set to your deployment branch
+
+**Step 3: Deploy the PostgREST backend**
+```bash
 doctl apps create --spec .do/production-app.yaml
 ```
 
-Your API will be immediately functional with example endpoints at `/welcome`, `/todos`, and `/todos_stats`.
+The `db-init` PRE_DEPLOY job runs `config/init.production.sql` automatically to create all table schemas.
 
-**Production features**: Autoscaling (1-3 instances), dedicated `api` schema, `anon` role for security.
-
-**To customize**: Fork this repo, update the repo reference in your chosen template (`.do/` folder) to point to your fork, then deploy.
-
-## Local Development
-
+**Step 4: Load H1B data into production**
 ```bash
-# Optional: Create .env file for custom credentials
-cp .env.example .env
-
-# Start services
-docker-compose up
-# Access API at http://127.0.0.1:3000
+psql "postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require" \
+  -f config/load_h1b_data_production.sql
 ```
 
-See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for API examples and troubleshooting.
+This loads the CSV data and populates all pre-computed derived tables.
+
+**Step 5: Deploy the frontend**
+
+Deploy the `frontend/` directory as a separate static site on App Platform, Cloudflare Pages, or Vercel. Set the `NEXT_PUBLIC_API_URL` environment variable to your PostgREST backend URL.
+
+## Database Schema
+
+### Source Table
+- `h1b_lca_data` — Raw H1B LCA disclosure data (~451K records)
+
+### Pre-computed Tables (populated once after data load)
+- `h1b_lca_stats` — Aggregate statistics (1 row)
+- `h1b_distinct_employers` — Distinct employers with filing counts (57K rows)
+- `h1b_distinct_jobs` — Distinct job/employer pairs (223K rows)
+- `h1b_distinct_locations` — Distinct location/employer pairs (252K rows)
+- `h1b_state_stats` — State-level aggregation (54 rows)
+
+Pre-computed tables eliminate expensive runtime aggregations. Every API call reads from ready-made tables.
 
 ## Customization
 
-### Using Sample Data (Default)
+**Database schema**: Edit `config/init.sql` (dev) or `config/init.production.sql` (production)
 
-The template includes a `db-init` PRE_DEPLOY job that initializes your database with:
-- Sample `todos` table with example data
-- Sample `todos_stats` view
-- Required permissions
-
-**Files**: `config/init.sql` (dev) or `config/init.production.sql` (production)
-
-**To customize**: Edit these files to add your own tables, views, and functions. The init script runs on every deployment.
-
-### Using Your Own Database
-
-**The `db-init` job is optional.** To use an existing database with your own schema:
-
-1. **Remove the jobs section** from `.do/app.yaml` or `.do/production-app.yaml`
-2. **Update environment variables**:
-   - `PGRST_DB_SCHEMAS` - your schema name(s)
-   - `PGRST_DB_ANON_ROLE` - database role for API access
-3. **Deploy** - PostgREST auto-generates endpoints from your schema
-
-**Note**: Production databases should use dedicated schemas (not `public`) and roles (not default user) for security.
+**Data loading**: Edit `config/load_h1b_data.sql` (dev) or `config/load_h1b_data_production.sql` (production)
 
 ## Resources
 
@@ -89,9 +100,3 @@ The template includes a `db-init` PRE_DEPLOY job that initializes your database 
 - [DigitalOcean App Platform Documentation](https://docs.digitalocean.com/products/app-platform/)
 - [App Spec Reference](https://docs.digitalocean.com/products/app-platform/reference/app-spec/)
 - [Local Development Guide](LOCAL_DEVELOPMENT.md)
-
-## Getting Help
-
-- **GitHub Issues**: [Report bugs or request features](https://github.com/AppPlatform-Templates/postgrest-appplatform/issues)
-- **DigitalOcean Community**: [community.digitalocean.com](https://www.digitalocean.com/community)
-- **Support**: [DigitalOcean Support](https://www.digitalocean.com/support/)
