@@ -42,7 +42,7 @@ jobs:
       - key: PGSSLMODE
         value: require
 
-    run_command: "psql -f /app/config/init.sql"
+    run_command: "psql -f /app/config/init.sql && psql -f /app/config/load_h1b_data.sql"
 
 services:
   - name: postgrest-service
