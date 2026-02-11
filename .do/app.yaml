@@ -17,8 +17,6 @@ databases:
 - name: postgrest-db
   engine: PG
   version: "16"
-  production: true
-  cluster_name: postgrest-db
 
 jobs:
 - name: db-init
@@ -66,7 +64,7 @@ services:
     max_instance_count: 3
     metrics:
       cpu:
-        percent: 80
+        percent: 85
 
   health_check:
     http_path: /
