@@ -57,7 +57,8 @@ services:
       deploy_on_push: true
 
   dockerfile_path: Dockerfile
-  http_port: 3000
+  internal_ports:
+  - 3000
   instance_size_slug: apps-d-1vcpu-1gb
 
   autoscaling:
