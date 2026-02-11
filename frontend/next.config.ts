@@ -5,12 +5,13 @@ const nextConfig: NextConfig = {
   // Uncomment the next line for static export:
   // output: "export",
 
-  // Allow API requests to PostgREST backend
+  // Proxy API requests to PostgREST backend (server-side only)
   async rewrites() {
+    const backendUrl = process.env.POSTGREST_INTERNAL_URL || "http://localhost:3000";
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/:path*`,
+        destination: `${backendUrl}/:path*`,
       },
     ];
   },

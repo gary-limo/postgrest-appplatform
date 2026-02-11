@@ -1,7 +1,8 @@
 import { H1BRecord, H1BStats, StateStats, SearchFilters } from "./types";
 import { expandLocationSearch } from "./states";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// Always use /api prefix - Next.js rewrites to backend (localhost dev, internal service prod)
+const API_URL = "/api";
 
 async function fetchAPI<T>(
   endpoint: string,
