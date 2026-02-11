@@ -72,44 +72,46 @@ CREATE OR REPLACE VIEW api.welcome AS
     json_build_object(
       'list_all', 'curl https://your-app.ondigitalocean.app/todos',
       'get_stats', 'curl https://your-app.ondigitalocean.app/todos_stats',
-      'create', 'curl -X POST https://your-app.ondigitalocean.app/todos -H "Content-Type: application/json" -d ''{"title":"New task","completed":false}''',
-      'update', 'curl -X PATCH https://your-app.ondigitalocean.app/todos?id=eq.1 -H "Content-Type: application/json" -d ''{"completed":true}''',
-      'delete', 'curl -X DELETE https://your-app.ondigitalocean.app/todos?id=eq.1',
+      -- DISABLED: Write endpoints (POST, PATCH, DELETE) are disabled for security
+      -- 'create', 'curl -X POST https://your-app.ondigitalocean.app/todos -H "Content-Type: application/json" -d ''{"title":"New task","completed":false}''',
+      -- 'update', 'curl -X PATCH https://your-app.ondigitalocean.app/todos?id=eq.1 -H "Content-Type: application/json" -d ''{"completed":true}''',
+      -- 'delete', 'curl -X DELETE https://your-app.ondigitalocean.app/todos?id=eq.1',
       'filter', 'curl https://your-app.ondigitalocean.app/todos?completed=eq.false',
       'sort_limit', 'curl https://your-app.ondigitalocean.app/todos?order=id.desc&limit=5'
     ) as examples,
     'https://postgrest.org'::text as docs;
 
--- Grant permissions to anon role (full CRUD access for demo purposes)
--- Note: For production, consider implementing JWT authentication and limiting anon to read-only
+-- Grant permissions to anon role (READ-ONLY access)
+-- Write operations (POST, PATCH, DELETE) are disabled for security
 GRANT USAGE ON SCHEMA api TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA api TO anon;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA api TO anon;
+GRANT SELECT ON ALL TABLES IN SCHEMA api TO anon;
+-- DISABLED: Write permissions (uncomment to re-enable POST, PATCH, DELETE)
+-- GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA api TO anon;
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA api TO anon;
 
 -- Ensure future tables also get permissions
-ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon;
-ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT USAGE, SELECT ON SEQUENCES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT SELECT ON TABLES TO anon;
+-- DISABLED: Write permissions for future tables (uncomment to re-enable)
+-- ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT INSERT, UPDATE, DELETE ON TABLES TO anon;
+-- ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT USAGE, SELECT ON SEQUENCES TO anon;
 
 -- Log completion
 DO $$
 BEGIN
   RAISE NOTICE '✓ Production database initialized successfully!';
   RAISE NOTICE '✓ Schema created: api';
-  RAISE NOTICE '✓ Role created: anon (full CRUD access)';
+  RAISE NOTICE '✓ Role created: anon (READ-ONLY access)';
   RAISE NOTICE '✓ Tables: api.todos';
   RAISE NOTICE '✓ Views: api.todos_stats, api.welcome';
-  RAISE NOTICE '✓ Permissions: anon role has SELECT, INSERT, UPDATE, DELETE on api schema';
+  RAISE NOTICE '✓ Permissions: anon role has SELECT-only on api schema';
   RAISE NOTICE '';
-  RAISE NOTICE 'Available endpoints:';
+  RAISE NOTICE 'Available endpoints (READ-ONLY):';
   RAISE NOTICE '  GET /welcome - API usage guide with curl examples ⭐';
   RAISE NOTICE '  GET /todos - List all todos';
   RAISE NOTICE '  GET /todos_stats - View statistics';
   RAISE NOTICE '  GET / - Full OpenAPI documentation';
   RAISE NOTICE '';
-  RAISE NOTICE '⚠️  SECURITY NOTE: anon role has full write access for demo purposes.';
-  RAISE NOTICE '   For production use, consider:';
-  RAISE NOTICE '   1. Implementing JWT-based authentication';
-  RAISE NOTICE '   2. Creating an "authenticated" role for write operations';
-  RAISE NOTICE '   3. Restricting anon role to SELECT-only';
-  RAISE NOTICE '   4. Adding row-level security (RLS) policies';
+  RAISE NOTICE '🔒 SECURITY: POST, PATCH, DELETE are DISABLED.';
+  RAISE NOTICE '   Write permissions are commented out in this script.';
+  RAISE NOTICE '   Uncomment GRANT INSERT/UPDATE/DELETE lines to re-enable.';
 END $$;
