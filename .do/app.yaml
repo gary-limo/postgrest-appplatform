@@ -117,3 +117,7 @@ services:
     # Backend URL for Next.js rewrites (internal service)
     - key: POSTGREST_INTERNAL_URL
       value: http://postgrest-service:3000
+    
+    # Fix npm peer dependency conflicts
+    - key: npm_config_legacy_peer_deps
+      value: "true"
