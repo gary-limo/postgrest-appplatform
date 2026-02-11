@@ -9,11 +9,17 @@ async function fetchAPI<T>(
   params?: Record<string, string>,
   headers?: Record<string, string>
 ): Promise<{ data: T; count?: number }> {
-  const url = new URL(`${API_URL}${endpoint}`);
+  // Build URL with query params
+  let url = `${API_URL}${endpoint}`;
   if (params) {
+    const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      if (value) url.searchParams.set(key, value);
+      if (value) searchParams.set(key, value);
     });
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
   }
 
   const requestHeaders: Record<string, string> = {
@@ -26,7 +32,7 @@ async function fetchAPI<T>(
     requestHeaders["Prefer"] = "count=exact";
   }
 
-  const res = await fetch(url.toString(), { headers: requestHeaders });
+  const res = await fetch(url, { headers: requestHeaders });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);
   }
