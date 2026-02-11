@@ -2,17 +2,10 @@
 --
 -- ⚠️  IMPORTANT: This script is for PRODUCTION databases only
 --
--- What this script does:
---   1. Creates a dedicated 'api' schema for application data
---   2. Creates a dedicated 'anon' role with full CRUD permissions
---   3. Creates the database schema (tables, views, functions)
---   4. Grants appropriate permissions to the anon role
---
 -- 🔒 SECURITY:
 --   - Uses dedicated 'api' schema (not public)
---   - anon role has full CRUD access (for demo functionality)
+--   - anon role is READ-ONLY
 --   - Fails loudly if roles cannot be created
---   - Consider restricting anon to read-only for production use
 --
 -- 📚  Learn more: https://postgrest.org/en/stable/tutorials/tut1.html
 
@@ -33,56 +26,87 @@ EXCEPTION WHEN insufficient_privilege THEN
   RAISE EXCEPTION 'SECURITY ERROR: Cannot create anon role. Production databases require custom roles for security. Check that your database user has CREATEROLE privilege.';
 END $$;
 
--- Create application tables in the api schema
-CREATE TABLE IF NOT EXISTS api.todos (
+-- =============================================================================
+-- DISABLED: Todo-related tables and views (commented out)
+-- =============================================================================
+-- CREATE TABLE IF NOT EXISTS api.todos (
+--   id SERIAL PRIMARY KEY,
+--   title TEXT NOT NULL,
+--   completed BOOLEAN DEFAULT FALSE,
+--   created_at TIMESTAMP DEFAULT NOW()
+-- );
+--
+-- INSERT INTO api.todos (title, completed)
+-- SELECT * FROM (VALUES
+--   ('Learn PostgREST', false),
+--   ('Deploy to App Platform', false),
+--   ('Build amazing APIs', false)
+-- ) AS v
+-- WHERE NOT EXISTS (SELECT 1 FROM api.todos);
+--
+-- CREATE OR REPLACE VIEW api.todos_stats AS
+--   SELECT
+--     COUNT(*) as total,
+--     COUNT(*) FILTER (WHERE completed) as completed_count,
+--     COUNT(*) FILTER (WHERE NOT completed) as pending_count
+--   FROM api.todos;
+--
+-- CREATE OR REPLACE VIEW api.welcome AS
+--   SELECT
+--     'Welcome to PostgREST API'::text as message,
+--     'PostgREST 12.2.3'::text as version,
+--     json_build_object(
+--       'todos', '/todos',
+--       'stats', '/todos_stats',
+--       'welcome', '/welcome',
+--       'openapi', '/'
+--     ) as endpoints,
+--     json_build_object(
+--       'list_all', 'curl https://your-app.ondigitalocean.app/todos',
+--       'get_stats', 'curl https://your-app.ondigitalocean.app/todos_stats',
+--       'filter', 'curl https://your-app.ondigitalocean.app/todos?completed=eq.false',
+--       'sort_limit', 'curl https://your-app.ondigitalocean.app/todos?order=id.desc&limit=5'
+--     ) as examples,
+--     'https://postgrest.org'::text as docs;
+-- =============================================================================
+
+-- =============================================================================
+-- H1B LCA Data Table
+-- Source: h1b.csv (~451K records)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS api.h1b_lca_data (
   id SERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  completed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW()
+  sq_nm INTEGER,
+  job_title TEXT,
+  soc_code VARCHAR(20),
+  soc_title TEXT,
+  employer_name TEXT,
+  employer_address TEXT,
+  worksite_address TEXT,
+  wage_rate_of_pay_from NUMERIC(12,2),
+  wage_rate_of_pay_to NUMERIC(12,2),
+  prevailing_wage NUMERIC(12,2),
+  pw_wage_level VARCHAR(10)
 );
 
--- Insert sample data only if table is empty (prevents duplicates on redeployment)
-INSERT INTO api.todos (title, completed)
-SELECT * FROM (VALUES
-  ('Learn PostgREST', false),
-  ('Deploy to App Platform', false),
-  ('Build amazing APIs', false)
-) AS v
-WHERE NOT EXISTS (SELECT 1 FROM api.todos);
+-- Create indexes for common query patterns
+CREATE INDEX IF NOT EXISTS idx_h1b_employer_name ON api.h1b_lca_data (employer_name);
+CREATE INDEX IF NOT EXISTS idx_h1b_job_title ON api.h1b_lca_data (job_title);
+CREATE INDEX IF NOT EXISTS idx_h1b_soc_code ON api.h1b_lca_data (soc_code);
+CREATE INDEX IF NOT EXISTS idx_h1b_wage_from ON api.h1b_lca_data (wage_rate_of_pay_from);
 
--- Create views in the api schema
-CREATE OR REPLACE VIEW api.todos_stats AS
+-- H1B stats view (accessible at /h1b_lca_stats)
+CREATE OR REPLACE VIEW api.h1b_lca_stats AS
   SELECT
-    COUNT(*) as total,
-    COUNT(*) FILTER (WHERE completed) as completed_count,
-    COUNT(*) FILTER (WHERE NOT completed) as pending_count
-  FROM api.todos;
-
--- Create a welcome view with API usage examples (accessible at /welcome)
-CREATE OR REPLACE VIEW api.welcome AS
-  SELECT
-    'Welcome to PostgREST API'::text as message,
-    'PostgREST 12.2.3'::text as version,
-    json_build_object(
-      'todos', '/todos',
-      'stats', '/todos_stats',
-      'welcome', '/welcome',
-      'openapi', '/'
-    ) as endpoints,
-    json_build_object(
-      'list_all', 'curl https://your-app.ondigitalocean.app/todos',
-      'get_stats', 'curl https://your-app.ondigitalocean.app/todos_stats',
-      -- DISABLED: Write endpoints (POST, PATCH, DELETE) are disabled for security
-      -- 'create', 'curl -X POST https://your-app.ondigitalocean.app/todos -H "Content-Type: application/json" -d ''{"title":"New task","completed":false}''',
-      -- 'update', 'curl -X PATCH https://your-app.ondigitalocean.app/todos?id=eq.1 -H "Content-Type: application/json" -d ''{"completed":true}''',
-      -- 'delete', 'curl -X DELETE https://your-app.ondigitalocean.app/todos?id=eq.1',
-      'filter', 'curl https://your-app.ondigitalocean.app/todos?completed=eq.false',
-      'sort_limit', 'curl https://your-app.ondigitalocean.app/todos?order=id.desc&limit=5'
-    ) as examples,
-    'https://postgrest.org'::text as docs;
+    COUNT(*) as total_records,
+    COUNT(DISTINCT employer_name) as unique_employers,
+    COUNT(DISTINCT job_title) as unique_job_titles,
+    ROUND(AVG(wage_rate_of_pay_from), 2) as avg_wage_from,
+    ROUND(MIN(wage_rate_of_pay_from), 2) as min_wage_from,
+    ROUND(MAX(wage_rate_of_pay_from), 2) as max_wage_from
+  FROM api.h1b_lca_data;
 
 -- Grant permissions to anon role (READ-ONLY access)
--- Write operations (POST, PATCH, DELETE) are disabled for security
 GRANT USAGE ON SCHEMA api TO anon;
 GRANT SELECT ON ALL TABLES IN SCHEMA api TO anon;
 -- DISABLED: Write permissions (uncomment to re-enable POST, PATCH, DELETE)
@@ -101,17 +125,15 @@ BEGIN
   RAISE NOTICE '✓ Production database initialized successfully!';
   RAISE NOTICE '✓ Schema created: api';
   RAISE NOTICE '✓ Role created: anon (READ-ONLY access)';
-  RAISE NOTICE '✓ Tables: api.todos';
-  RAISE NOTICE '✓ Views: api.todos_stats, api.welcome';
+  RAISE NOTICE '✓ Tables: api.h1b_lca_data';
+  RAISE NOTICE '✓ Views: api.h1b_lca_stats';
   RAISE NOTICE '✓ Permissions: anon role has SELECT-only on api schema';
   RAISE NOTICE '';
   RAISE NOTICE 'Available endpoints (READ-ONLY):';
-  RAISE NOTICE '  GET /welcome - API usage guide with curl examples ⭐';
-  RAISE NOTICE '  GET /todos - List all todos';
-  RAISE NOTICE '  GET /todos_stats - View statistics';
+  RAISE NOTICE '  GET /h1b_lca_data - H1B LCA data (~451K records)';
+  RAISE NOTICE '  GET /h1b_lca_stats - H1B aggregate statistics';
   RAISE NOTICE '  GET / - Full OpenAPI documentation';
   RAISE NOTICE '';
   RAISE NOTICE '🔒 SECURITY: POST, PATCH, DELETE are DISABLED.';
   RAISE NOTICE '   Write permissions are commented out in this script.';
-  RAISE NOTICE '   Uncomment GRANT INSERT/UPDATE/DELETE lines to re-enable.';
 END $$;
