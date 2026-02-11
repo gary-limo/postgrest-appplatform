@@ -22,8 +22,9 @@ RUN wget -O /tmp/postgrest.tar.xz \
 # Create app directory for config files
 WORKDIR /app
 
-# Copy configuration files directly to /config
+# Copy configuration files and data
 COPY config/ /app/config/
+COPY h1b.csv /app/h1b.csv
 
 # Create a startup script
 COPY start.sh /start.sh

@@ -18,7 +18,7 @@
 -- =============================================
 TRUNCATE api.h1b_lca_data RESTART IDENTITY;
 
-\copy api.h1b_lca_data (sq_nm, job_title, soc_code, soc_title, employer_name, employer_address, worksite_address, wage_rate_of_pay_from, wage_rate_of_pay_to, prevailing_wage, pw_wage_level) FROM 'h1b.csv' WITH (FORMAT csv, HEADER true, NULL '');
+\copy api.h1b_lca_data (sq_nm, job_title, soc_code, soc_title, employer_name, employer_address, worksite_address, wage_rate_of_pay_from, wage_rate_of_pay_to, prevailing_wage, pw_wage_level) FROM '/app/h1b.csv' WITH (FORMAT csv, HEADER true, NULL '');
 
 SELECT COUNT(*) as rows_loaded FROM api.h1b_lca_data;
 
