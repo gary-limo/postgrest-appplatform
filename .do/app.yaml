@@ -82,7 +82,7 @@ services:
 
     # Database schema to expose via API
     - key: PGRST_DB_SCHEMAS
-      value: public
+      value: api
 
     # Read-only role (blocks POST/PATCH/DELETE)
     - key: PGRST_DB_ANON_ROLE
