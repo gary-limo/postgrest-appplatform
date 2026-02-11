@@ -85,11 +85,11 @@ services:
     - key: PGRST_DB_URI
       value: ${postgrest-db.DATABASE_URL}
 
-    # Database schema to expose via API (using dedicated 'api' schema for production)
+    # Database schema to expose via API
     - key: PGRST_DB_SCHEMAS
-      value: api
+      value: public
 
-    # Anonymous role for unauthenticated requests (using dedicated anon role)
+    # Anonymous role for unauthenticated requests (read-only, blocks POST/PATCH/DELETE)
     - key: PGRST_DB_ANON_ROLE
       value: anon
 
