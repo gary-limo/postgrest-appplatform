@@ -146,17 +146,17 @@ export function DataTable({
                   index % 2 === 0 ? "bg-white" : "bg-[#FAF7F0]/50"
                 }`}
               >
-                <TableCell className="font-medium max-w-[200px] truncate text-[#1B2A4A]">
-                  {record.employer_name}
+                <TableCell className="font-medium min-w-[160px] max-w-[220px] text-[#1B2A4A]">
+                  <div className="truncate">{record.employer_name}</div>
                 </TableCell>
-                <TableCell className="max-w-[200px]">
+                <TableCell className="min-w-[160px] max-w-[220px]">
                   <div className="truncate font-medium">{record.job_title}</div>
                   <div className="text-xs text-muted-foreground truncate mt-0.5">
                     {record.soc_title}
                   </div>
                 </TableCell>
-                <TableCell className="hidden lg:table-cell text-sm max-w-[180px] truncate text-muted-foreground">
-                  {record.worksite_address}
+                <TableCell className="hidden lg:table-cell text-sm min-w-[240px] max-w-[320px] text-muted-foreground">
+                  <div className="whitespace-normal leading-snug">{record.worksite_address}</div>
                 </TableCell>
                 <TableCell className="text-right font-mono font-semibold whitespace-nowrap text-[#1B2A4A]">
                   {formatCurrency(record.wage_rate_of_pay_from)}

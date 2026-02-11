@@ -12,50 +12,6 @@
 --    We use the 'public' schema and the default database user instead.
 
 -- =============================================================================
--- DISABLED: Todo-related tables and views (commented out)
--- =============================================================================
--- CREATE TABLE IF NOT EXISTS public.todos (
---   id SERIAL PRIMARY KEY,
---   title TEXT NOT NULL,
---   completed BOOLEAN DEFAULT FALSE,
---   created_at TIMESTAMP DEFAULT NOW()
--- );
---
--- INSERT INTO public.todos (title, completed)
--- SELECT * FROM (VALUES
---   ('Learn PostgREST', false),
---   ('Deploy to App Platform', false),
---   ('Build amazing APIs', false)
--- ) AS v
--- WHERE NOT EXISTS (SELECT 1 FROM public.todos);
---
--- CREATE OR REPLACE VIEW public.todos_stats AS
---   SELECT
---     COUNT(*) as total,
---     COUNT(*) FILTER (WHERE completed) as completed_count,
---     COUNT(*) FILTER (WHERE NOT completed) as pending_count
---   FROM public.todos;
---
--- CREATE OR REPLACE VIEW public.welcome AS
---   SELECT
---     'Welcome to PostgREST API'::text as message,
---     'PostgREST 12.2.3'::text as version,
---     json_build_object(
---       'todos', '/todos',
---       'stats', '/todos_stats',
---       'welcome', '/welcome',
---       'openapi', '/'
---     ) as endpoints,
---     json_build_object(
---       'list_all', 'curl https://your-app.ondigitalocean.app/todos',
---       'get_stats', 'curl https://your-app.ondigitalocean.app/todos_stats',
---       'filter', 'curl https://your-app.ondigitalocean.app/todos?completed=eq.false',
---       'sort_limit', 'curl https://your-app.ondigitalocean.app/todos?order=id.desc&limit=5'
---     ) as examples,
---     'https://postgrest.org'::text as docs;
--- =============================================================================
-
--- =============================================================================
 -- H1B LCA Data Table
 -- Source: h1b.csv (~451K records)
 -- =============================================================================
@@ -91,6 +47,34 @@ CREATE OR REPLACE VIEW public.h1b_lca_stats AS
     ROUND(MAX(wage_rate_of_pay_from), 2) as max_wage_from
   FROM public.h1b_lca_data;
 
+-- =============================================================================
+-- Autocomplete suggestion views (DISTINCT values for fast typeahead)
+-- Normalized with TRIM/UPPER to eliminate trailing-space and case duplicates.
+-- Includes filing_count so results can be sorted by popularity (most filings first).
+-- =============================================================================
+CREATE OR REPLACE VIEW public.h1b_distinct_employers AS
+  SELECT UPPER(TRIM(employer_name)) as employer_name,
+         COUNT(*) as filing_count
+  FROM public.h1b_lca_data
+  WHERE employer_name IS NOT NULL
+  GROUP BY UPPER(TRIM(employer_name));
+
+CREATE OR REPLACE VIEW public.h1b_distinct_jobs AS
+  SELECT UPPER(TRIM(employer_name)) as employer_name,
+         TRIM(job_title) as job_title,
+         COUNT(*) as filing_count
+  FROM public.h1b_lca_data
+  WHERE job_title IS NOT NULL
+  GROUP BY UPPER(TRIM(employer_name)), TRIM(job_title);
+
+CREATE OR REPLACE VIEW public.h1b_distinct_locations AS
+  SELECT UPPER(TRIM(employer_name)) as employer_name,
+         TRIM(worksite_address) as worksite_address,
+         COUNT(*) as filing_count
+  FROM public.h1b_lca_data
+  WHERE worksite_address IS NOT NULL
+  GROUP BY UPPER(TRIM(employer_name)), TRIM(worksite_address);
+
 -- 🔒 SECURITY: Revoke write permissions to disable POST, PATCH, DELETE
 REVOKE INSERT, UPDATE, DELETE ON public.h1b_lca_data FROM PUBLIC;
 REVOKE USAGE ON public.h1b_lca_data_id_seq FROM PUBLIC;
@@ -103,6 +87,9 @@ BEGIN
   RAISE NOTICE 'Available endpoints (READ-ONLY):';
   RAISE NOTICE '  GET /h1b_lca_data - H1B LCA data (~451K records)';
   RAISE NOTICE '  GET /h1b_lca_stats - H1B aggregate statistics';
+  RAISE NOTICE '  GET /h1b_distinct_employers - Distinct employer names';
+  RAISE NOTICE '  GET /h1b_distinct_jobs - Distinct job titles per employer';
+  RAISE NOTICE '  GET /h1b_distinct_locations - Distinct locations per employer';
   RAISE NOTICE '  GET / - Full OpenAPI documentation';
   RAISE NOTICE '';
   RAISE NOTICE '🔒 POST, PATCH, DELETE are DISABLED.';

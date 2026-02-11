@@ -24,10 +24,10 @@ import {
 const formatTooltip = (value: any) => [formatNumber(Number(value)), "Records"];
 
 const LEVEL_COLORS = {
-  I: "#3b82f6",
-  II: "#22c55e",
-  III: "#a855f7",
-  IV: "#f97316",
+  I: "#1B2A4A",
+  II: "#2B7A78",
+  III: "#C41E3A",
+  IV: "#C4A35A",
 };
 
 export default function StatsPage() {
@@ -143,19 +143,24 @@ export default function StatsPage() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">H1B Statistics Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Aggregate insights from the H1B LCA disclosure dataset
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-1 bg-[#C4A35A] rounded-full" />
+          <div>
+            <h1 className="text-2xl font-bold text-[#1B2A4A]">H1B Statistics Dashboard</h1>
+            <p className="text-muted-foreground mt-0.5">
+              Aggregate insights from the H1B LCA disclosure dataset
+            </p>
+          </div>
+        </div>
       </div>
 
       <StatsCards />
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Salary Distribution */}
-        <Card>
+        <Card className="border-t-2 border-t-[#1B2A4A]">
           <CardHeader>
-            <CardTitle className="text-base">Salary Distribution</CardTitle>
+            <CardTitle className="text-base text-[#1B2A4A]">Salary Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingCharts ? (
@@ -179,7 +184,7 @@ export default function StatsPage() {
                     }
                   />
                   <Tooltip formatter={formatTooltip} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="#1B2A4A" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -187,9 +192,9 @@ export default function StatsPage() {
         </Card>
 
         {/* Wage Level Distribution */}
-        <Card>
+        <Card className="border-t-2 border-t-[#C41E3A]">
           <CardHeader>
-            <CardTitle className="text-base">
+            <CardTitle className="text-base text-[#1B2A4A]">
               Wage Level Distribution
             </CardTitle>
           </CardHeader>
@@ -241,9 +246,9 @@ export default function StatsPage() {
         </Card>
 
         {/* Top Companies */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 border-t-2 border-t-[#C4A35A]">
           <CardHeader>
-            <CardTitle className="text-base">
+            <CardTitle className="text-base text-[#1B2A4A]">
               Top H1B Sponsoring Companies
             </CardTitle>
           </CardHeader>
@@ -272,7 +277,7 @@ export default function StatsPage() {
                     width={100}
                   />
                   <Tooltip formatter={(value: unknown) => [formatNumber(Number(value)), "H1B Filings"]} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="count" fill="#C41E3A" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}

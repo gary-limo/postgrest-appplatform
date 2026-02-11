@@ -1,17 +1,17 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getH1BData } from "@/lib/api";
-import { SearchBar } from "@/components/search-bar";
+import { detectStateInQuery } from "@/lib/states";
 import { SearchFilters } from "@/components/search-filters";
 import { DataTable } from "@/components/data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -95,6 +95,18 @@ function SearchPageContent() {
     placeholderData: (previousData) => previousData,
   });
 
+  // Detect state names in search/location for helpful hints
+  const stateHint = useMemo(() => {
+    const terms = [searchQuery, filters.location].filter(Boolean);
+    for (const term of terms) {
+      const detected = detectStateInQuery(term);
+      if (detected) {
+        return detected;
+      }
+    }
+    return null;
+  }, [searchQuery, filters.location]);
+
   // Update URL when filters change (debounced)
   const updateURL = useCallback(() => {
     const params = new URLSearchParams();
@@ -138,13 +150,10 @@ function SearchPageContent() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* Search bar */}
-      <div>
-        <h1 className="text-2xl font-bold mb-4">Search H1B Data</h1>
-        <SearchBar
-          defaultValue={searchQuery}
-          placeholder="Search by company, job title, or location..."
-        />
+      {/* Page heading */}
+      <div className="flex items-center gap-3">
+        <div className="h-6 w-1 bg-[#1B2A4A] rounded-full" />
+        <h1 className="text-2xl font-bold text-[#1B2A4A]">Search H1B Data</h1>
       </div>
 
       {/* Filters toggle */}
@@ -153,7 +162,7 @@ function SearchPageContent() {
           variant="outline"
           size="sm"
           onClick={() => setShowFilters(!showFilters)}
-          className="gap-2"
+          className="gap-2 border-[#1B2A4A]/20 hover:bg-[#1B2A4A] hover:text-white"
         >
           {showFilters ? (
             <ChevronUp className="h-4 w-4" />
@@ -166,7 +175,7 @@ function SearchPageContent() {
 
       {/* Filters panel */}
       {showFilters && (
-        <Card>
+        <Card className="border-t-2 border-t-[#C4A35A]">
           <CardContent className="pt-6">
             <SearchFilters
               filters={filters}
@@ -177,7 +186,22 @@ function SearchPageContent() {
         </Card>
       )}
 
-      <Separator />
+      <Separator className="bg-[#E0DCD4]" />
+
+      {/* State name hint banner */}
+      {stateHint && (
+        <div className="flex items-start gap-3 rounded-xl border border-[#C4A35A]/30 bg-[#C4A35A]/5 px-4 py-3">
+          <Lightbulb className="h-5 w-5 text-[#C4A35A] shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="text-[#1B2A4A]">
+              <span className="font-semibold">Tip:</span> The dataset stores{" "}
+              <span className="font-semibold">{stateHint.stateName}</span> as{" "}
+              <span className="font-mono font-bold text-[#C41E3A]">{stateHint.stateAbbrev}</span>.
+              We&apos;re automatically searching for both forms to give you the best results.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Results table */}
       <DataTable

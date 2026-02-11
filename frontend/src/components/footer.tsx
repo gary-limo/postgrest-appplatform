@@ -12,7 +12,7 @@ export function Footer() {
             </span>
           </div>
           <p className="text-xs text-white/50 text-center sm:text-right">
-            Data sourced from U.S. Department of Labor LCA Disclosure Data.
+            Data sourced from U.S. Department of Labor LCA Disclosure Data (2025).
             For informational purposes only.
           </p>
         </div>

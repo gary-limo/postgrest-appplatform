@@ -1,9 +1,16 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
+import { useCallback } from "react";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AutocompleteInput } from "@/components/autocomplete-input";
+import {
+  getEmployerSuggestions,
+  getJobTitleSuggestions,
+  getLocationSuggestions,
+} from "@/lib/api";
 import { X, SlidersHorizontal } from "lucide-react";
 
 interface FilterState {
@@ -42,18 +49,39 @@ export function SearchFilters({
     onFilterChange({ ...filters, [key]: value });
   };
 
+  // Scoped suggestion fetchers: job titles and locations narrow
+  // based on the currently selected employer
+  const currentEmployer = filters.employer_name;
+
+  const fetchJobSuggestions = useCallback(
+    (query: string) => getJobTitleSuggestions(query, currentEmployer || undefined),
+    [currentEmployer]
+  );
+
+  const fetchLocationSuggestions = useCallback(
+    (query: string) => getLocationSuggestions(query, currentEmployer || undefined),
+    [currentEmployer]
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-medium text-sm">Filters</h3>
+          <SlidersHorizontal className="h-4 w-4 text-[#C4A35A]" />
+          <h3 className="font-medium text-sm text-[#1B2A4A]">Filters</h3>
           {activeFilterCount > 0 && (
-            <Badge variant="secondary">{activeFilterCount} active</Badge>
+            <Badge className="bg-[#1B2A4A] text-white hover:bg-[#2B3F6B] text-xs">
+              {activeFilterCount} active
+            </Badge>
           )}
         </div>
         {activeFilterCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={onClear}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="text-[#C41E3A] hover:text-[#C41E3A] hover:bg-[#C41E3A]/5"
+          >
             <X className="h-3 w-3 mr-1" />
             Clear all
           </Button>
@@ -62,50 +90,80 @@ export function SearchFilters({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="employer" className="text-xs">
+          <Label htmlFor="employer" className="text-xs text-muted-foreground">
             Company / Employer
           </Label>
-          <Input
+          <AutocompleteInput
             id="employer"
             placeholder="e.g. Google, Amazon..."
             value={filters.employer_name}
-            onChange={(e) => updateFilter("employer_name", e.target.value)}
+            onChange={(val) => updateFilter("employer_name", val)}
+            fetchSuggestions={getEmployerSuggestions}
+            queryKeyPrefix="suggest-employer"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="job_title" className="text-xs">
+          <Label htmlFor="job_title" className="text-xs text-muted-foreground">
             Job Title / Role
+            {currentEmployer && (
+              <span className="ml-1 text-[#C41E3A]">
+                (at {currentEmployer})
+              </span>
+            )}
           </Label>
-          <Input
+          <AutocompleteInput
             id="job_title"
-            placeholder="e.g. Software Engineer..."
+            placeholder={
+              currentEmployer
+                ? `Browse or type roles at ${currentEmployer}...`
+                : "e.g. Software Engineer..."
+            }
             value={filters.job_title}
-            onChange={(e) => updateFilter("job_title", e.target.value)}
+            onChange={(val) => updateFilter("job_title", val)}
+            fetchSuggestions={fetchJobSuggestions}
+            queryKeyPrefix={`suggest-jobtitle-${currentEmployer || "all"}`}
+            showAllOnFocus={!!currentEmployer}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="location" className="text-xs">
+          <Label htmlFor="location" className="text-xs text-muted-foreground">
             City / State / Location
+            {currentEmployer && (
+              <span className="ml-1 text-[#C41E3A]">
+                (at {currentEmployer})
+              </span>
+            )}
           </Label>
-          <Input
+          <AutocompleteInput
             id="location"
-            placeholder="e.g. San Francisco, CA..."
+            placeholder={
+              currentEmployer
+                ? `Browse or type locations for ${currentEmployer}...`
+                : "e.g. San Francisco, CA..."
+            }
             value={filters.location}
-            onChange={(e) => updateFilter("location", e.target.value)}
+            onChange={(val) => updateFilter("location", val)}
+            fetchSuggestions={fetchLocationSuggestions}
+            queryKeyPrefix={`suggest-location-${currentEmployer || "all"}`}
+            showAllOnFocus={!!currentEmployer}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="wage_level" className="text-xs">
+          <Label htmlFor="wage_level" className="text-xs text-muted-foreground">
             Wage Level
           </Label>
           <select
             id="wage_level"
             value={filters.pw_wage_level}
             onChange={(e) => updateFilter("pw_wage_level", e.target.value)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              filters.pw_wage_level
+                ? "font-semibold text-[#1B2A4A] border-[#1B2A4A]/30 bg-[#1B2A4A]/[0.02]"
+                : "border-input"
+            }`}
           >
             {wageLevels.map((level) => (
               <option key={level.value} value={level.value}>
@@ -116,7 +174,7 @@ export function SearchFilters({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="wage_min" className="text-xs">
+          <Label htmlFor="wage_min" className="text-xs text-muted-foreground">
             Min Salary ($)
           </Label>
           <Input
@@ -125,11 +183,16 @@ export function SearchFilters({
             placeholder="e.g. 100000"
             value={filters.wage_min}
             onChange={(e) => updateFilter("wage_min", e.target.value)}
+            className={
+              filters.wage_min
+                ? "font-semibold text-[#1B2A4A] border-[#1B2A4A]/30 bg-[#1B2A4A]/[0.02]"
+                : ""
+            }
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="wage_max" className="text-xs">
+          <Label htmlFor="wage_max" className="text-xs text-muted-foreground">
             Max Salary ($)
           </Label>
           <Input
@@ -138,6 +201,11 @@ export function SearchFilters({
             placeholder="e.g. 250000"
             value={filters.wage_max}
             onChange={(e) => updateFilter("wage_max", e.target.value)}
+            className={
+              filters.wage_max
+                ? "font-semibold text-[#1B2A4A] border-[#1B2A4A]/30 bg-[#1B2A4A]/[0.02]"
+                : ""
+            }
           />
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { H1BRecord, H1BStats, SearchFilters } from "./types";
+import { expandLocationSearch } from "./states";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -44,10 +45,49 @@ async function fetchAPI<T>(
   return { data, count };
 }
 
+/**
+ * Build a PostgREST OR clause for a location search that expands
+ * state names to abbreviations and vice versa.
+ *
+ * "Connecticut" → (worksite_address.ilike.*Connecticut*,worksite_address.ilike.*CT*)
+ */
+function buildLocationFilter(term: string): string {
+  const expanded = expandLocationSearch(term);
+  if (expanded.length === 1) {
+    return `worksite_address.ilike.*${expanded[0]}*`;
+  }
+  // Multiple terms: OR them together
+  return expanded.map((t) => `worksite_address.ilike.*${t}*`).join(",");
+}
+
+/**
+ * Build a global search OR clause that expands state names/abbreviations
+ * across employer_name, job_title, and worksite_address.
+ */
+function buildGlobalSearchFilter(search: string): string {
+  const expanded = expandLocationSearch(search);
+  const clauses: string[] = [];
+
+  // Always search the original term across all fields
+  clauses.push(`employer_name.ilike.*${search}*`);
+  clauses.push(`job_title.ilike.*${search}*`);
+  clauses.push(`worksite_address.ilike.*${search}*`);
+
+  // If we detected a state, also search the alternate form in worksite_address
+  if (expanded.length > 1) {
+    for (let i = 1; i < expanded.length; i++) {
+      clauses.push(`worksite_address.ilike.*${expanded[i]}*`);
+    }
+  }
+
+  return `(${clauses.join(",")})`;
+}
+
 export async function getH1BData(
   filters: SearchFilters
 ): Promise<{ data: H1BRecord[]; count: number }> {
   const params: Record<string, string> = {};
+  const orClauses: string[] = [];
 
   if (filters.employer_name) {
     params["employer_name"] = `ilike.*${filters.employer_name}*`;
@@ -56,7 +96,17 @@ export async function getH1BData(
     params["job_title"] = `ilike.*${filters.job_title}*`;
   }
   if (filters.worksite_address) {
-    params["worksite_address"] = `ilike.*${filters.worksite_address}*`;
+    // Expand state names ↔ abbreviations for location filter
+    const expanded = expandLocationSearch(filters.worksite_address);
+    if (expanded.length === 1) {
+      params["worksite_address"] = `ilike.*${expanded[0]}*`;
+    } else {
+      // Need to use OR for multiple location terms
+      const locationOr = expanded
+        .map((t) => `worksite_address.ilike.*${t}*`)
+        .join(",");
+      orClauses.push(locationOr);
+    }
   }
   if (filters.pw_wage_level) {
     params["pw_wage_level"] = `eq.${filters.pw_wage_level}`;
@@ -65,26 +115,30 @@ export async function getH1BData(
     params["wage_rate_of_pay_from"] = `gte.${filters.wage_min}`;
   }
   if (filters.wage_max) {
-    // Use a PostgREST "and" filter for range
     if (filters.wage_min) {
       params["wage_rate_of_pay_from"] = `gte.${filters.wage_min}`;
-      // Add wage_max as a separate filter using the 'and' syntax
       params["and"] = `(wage_rate_of_pay_from.lte.${filters.wage_max})`;
     } else {
       params["wage_rate_of_pay_from"] = `lte.${filters.wage_max}`;
     }
   }
   if (filters.search) {
-    // Full text search across employer and job title using PostgREST 'or'
-    params["or"] = `(employer_name.ilike.*${filters.search}*,job_title.ilike.*${filters.search}*,worksite_address.ilike.*${filters.search}*)`;
+    // Global search with state name expansion
+    params["or"] = buildGlobalSearchFilter(filters.search);
+  }
+
+  // If we have location OR clauses from state expansion and no global search,
+  // merge them into the 'or' param
+  if (orClauses.length > 0 && !filters.search) {
+    params["or"] = `(${orClauses.join(",")})`;
   }
 
   params["limit"] = String(filters.limit || 25);
   params["offset"] = String(filters.offset || 0);
   params["order"] = filters.order || "wage_rate_of_pay_from.desc";
 
-  // Select specific columns to reduce payload
-  params["select"] = "id,job_title,soc_code,soc_title,employer_name,worksite_address,wage_rate_of_pay_from,wage_rate_of_pay_to,prevailing_wage,pw_wage_level";
+  params["select"] =
+    "id,job_title,soc_code,soc_title,employer_name,worksite_address,wage_rate_of_pay_from,wage_rate_of_pay_to,prevailing_wage,pw_wage_level";
 
   const result = await fetchAPI<H1BRecord[]>("/h1b_lca_data", params, {
     Prefer: "count=exact",
@@ -101,18 +155,13 @@ export async function getH1BStats(): Promise<H1BStats> {
 export async function getTopEmployers(
   limit: number = 10
 ): Promise<{ employer_name: string; count: number; avg_wage: number }[]> {
-  // Use PostgREST RPC or a custom view - for now we'll fetch and aggregate client-side
-  // This is a workaround since PostgREST doesn't support GROUP BY directly
   const result = await fetchAPI<H1BRecord[]>("/h1b_lca_data", {
     select: "employer_name,wage_rate_of_pay_from",
     order: "employer_name.asc",
     limit: "5000",
   });
 
-  const employerMap = new Map<
-    string,
-    { count: number; totalWage: number }
-  >();
+  const employerMap = new Map<string, { count: number; totalWage: number }>();
 
   result.data.forEach((record) => {
     const existing = employerMap.get(record.employer_name);
@@ -135,26 +184,124 @@ export async function getTopEmployers(
     .slice(0, limit);
 }
 
-export async function getDistinctValues(
-  column: string,
-  search?: string,
-  limit: number = 20
+/**
+ * Fetch employer name suggestions from the DISTINCT view.
+ * Uses /h1b_distinct_employers which returns pre-deduplicated results
+ * so every row is a unique employer — no client-side deduplication needed.
+ */
+export async function getEmployerSuggestions(
+  search: string
 ): Promise<string[]> {
+  if (!search || search.length < 2) return [];
+
+  const result = await fetchAPI<{ employer_name: string }[]>(
+    "/h1b_distinct_employers",
+    {
+      select: "employer_name",
+      employer_name: `ilike.*${search}*`,
+      order: "filing_count.desc",
+      limit: "15",
+    }
+  );
+
+  return result.data.map((r) => r.employer_name).filter(Boolean);
+}
+
+/**
+ * Fetch job title suggestions from the DISTINCT view.
+ * Uses /h1b_distinct_jobs which stores unique (employer, job_title) pairs.
+ * Optionally scoped to a specific employer for relevant results.
+ *
+ * When an employer is provided, an empty search returns the top roles
+ * at that company (sorted by filing count) — enabling a "browse all roles" dropdown.
+ */
+export async function getJobTitleSuggestions(
+  search: string,
+  employerName?: string
+): Promise<string[]> {
+  // Without an employer, require at least 2 chars to avoid huge unscoped queries
+  if (!employerName && (!search || search.length < 2)) return [];
+
   const params: Record<string, string> = {
-    select: column,
-    order: `${column}.asc`,
-    limit: String(limit),
+    select: "job_title",
+    order: "filing_count.desc",
+    limit: employerName ? "25" : "15",
   };
+
   if (search) {
-    params[column] = `ilike.*${search}*`;
+    params.job_title = `ilike.*${search}*`;
   }
 
-  const result = await fetchAPI<Record<string, string>[]>(
-    "/h1b_lca_data",
+  if (employerName) {
+    params.employer_name = `ilike.*${employerName}*`;
+  }
+
+  const result = await fetchAPI<{ job_title: string }[]>(
+    "/h1b_distinct_jobs",
     params
   );
 
-  // Deduplicate
-  const unique = [...new Set(result.data.map((r) => r[column]).filter(Boolean))];
-  return unique.slice(0, limit);
+  return result.data.map((r) => r.job_title).filter(Boolean);
+}
+
+/**
+ * Fetch location suggestions from the DISTINCT view.
+ * Uses /h1b_distinct_locations which stores unique (employer, worksite_address) pairs.
+ * Also expands state names to abbreviations for better matching.
+ * Optionally scoped to a specific employer.
+ *
+ * When an employer is provided, an empty search returns the top locations
+ * for that company — enabling a "browse all locations" dropdown.
+ */
+export async function getLocationSuggestions(
+  search: string,
+  employerName?: string
+): Promise<string[]> {
+  // Without an employer, require at least 2 chars
+  if (!employerName && (!search || search.length < 2)) return [];
+
+  // No search term and employer provided → return top locations for employer
+  if (!search && employerName) {
+    const params: Record<string, string> = {
+      select: "worksite_address",
+      employer_name: `ilike.*${employerName}*`,
+      order: "filing_count.desc",
+      limit: "25",
+    };
+
+    const result = await fetchAPI<{ worksite_address: string }[]>(
+      "/h1b_distinct_locations",
+      params
+    );
+
+    return result.data.map((r) => r.worksite_address).filter(Boolean);
+  }
+
+  const expanded = expandLocationSearch(search);
+  const allResults: string[] = [];
+
+  for (const term of expanded) {
+    const params: Record<string, string> = {
+      select: "worksite_address",
+      worksite_address: `ilike.*${term}*`,
+      order: "filing_count.desc",
+      limit: "10",
+    };
+
+    if (employerName) {
+      params.employer_name = `ilike.*${employerName}*`;
+    }
+
+    const result = await fetchAPI<{ worksite_address: string }[]>(
+      "/h1b_distinct_locations",
+      params
+    );
+
+    allResults.push(
+      ...result.data.map((r) => r.worksite_address).filter(Boolean)
+    );
+  }
+
+  const unique = [...new Set(allResults)];
+  return unique.slice(0, 15);
 }

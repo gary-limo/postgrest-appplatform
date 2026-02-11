@@ -15,7 +15,7 @@ interface SearchBarProps {
 export function SearchBar({
   defaultValue = "",
   size = "default",
-  placeholder = "Search by company, job title, or location...",
+  placeholder = "Search by company or job title...",
 }: SearchBarProps) {
   const [query, setQuery] = useState(defaultValue);
   const router = useRouter();

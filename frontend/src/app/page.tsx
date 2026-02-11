@@ -6,7 +6,7 @@ import { getH1BData } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { SearchBar } from "@/components/search-bar";
 import { StatsCards } from "@/components/stats-cards";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,8 +15,7 @@ import {
   Building2,
   TrendingUp,
   MapPin,
-  Search,
-  DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -26,26 +25,23 @@ export default function HomePage() {
     queryKey: ["top-paying"],
     queryFn: () =>
       getH1BData({
-        limit: 5,
+        limit: 10,
         order: "wage_rate_of_pay_from.desc",
-        wage_min: 100000,
-        wage_max: 1000000,
       }),
   });
 
   const popularSearches = [
-    "Google",
-    "Amazon",
-    "Microsoft",
-    "Meta",
-    "Apple",
-    "Software Engineer",
-    "Data Scientist",
-    "Product Manager",
-    "California",
-    "New York",
-    "Texas",
-    "Washington",
+    { label: "Google LLC", param: "employer", value: "Google LLC" },
+    { label: "Amazon.com Services LLC", param: "employer", value: "Amazon.com Services LLC" },
+    { label: "Microsoft Corporation", param: "employer", value: "Microsoft Corporation" },
+    { label: "Meta Platforms Inc", param: "employer", value: "Meta Platforms Inc" },
+    { label: "Apple Inc", param: "employer", value: "Apple Inc" },
+    { label: "Accenture LLP", param: "employer", value: "Accenture LLP" },
+    { label: "Software Engineer", param: "job", value: "Software Engineer" },
+    { label: "Data Scientist", param: "job", value: "Data Scientist" },
+    { label: "Data Engineer", param: "job", value: "Data Engineer" },
+    { label: "AI Engineer", param: "job", value: "AI Engineer" },
+    { label: "Product Manager", param: "job", value: "Product Manager" },
   ];
 
   return (
@@ -76,16 +72,16 @@ export default function HomePage() {
               <SearchBar size="large" />
             </div>
             <div className="flex flex-wrap justify-center gap-2 pt-3">
-              {popularSearches.map((term) => (
+              {popularSearches.map((item) => (
                 <Badge
-                  key={term}
+                  key={item.label}
                   variant="outline"
                   className="cursor-pointer border-white/20 text-white/70 hover:bg-white/10 hover:text-white hover:border-[#C4A35A]/50 transition-all duration-200 text-xs"
                   onClick={() =>
-                    router.push(`/search?q=${encodeURIComponent(term)}`)
+                    router.push(`/search?${item.param}=${encodeURIComponent(item.value)}`)
                   }
                 >
-                  {term}
+                  {item.label}
                 </Badge>
               ))}
             </div>
@@ -109,13 +105,13 @@ export default function HomePage() {
       </section>
 
       {/* Top Paying Section */}
-      <section className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <section className="container mx-auto px-4 py-8 pb-12">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="h-6 w-1 bg-[#C41E3A] rounded-full" />
             <h2 className="text-xl font-bold text-[#1B2A4A] flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-[#C41E3A]" />
-              Top Paying Positions
+              Highest Reported Salaries
             </h2>
           </div>
           <Button
@@ -129,6 +125,18 @@ export default function HomePage() {
             View all <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
+
+        {/* Data disclaimer */}
+        <div className="flex items-start gap-2.5 rounded-lg border border-[#C4A35A]/30 bg-[#C4A35A]/5 px-4 py-3 mb-6">
+          <AlertTriangle className="h-4 w-4 text-[#C4A35A] shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-[#1B2A4A]">Disclaimer:</span>{" "}
+            Data is directly sourced from LCA / U.S. Department of Labor disclosure files.
+            Some figures may be incorrect due to manual data entry errors by employers.
+            This information is for reference purposes only.
+          </p>
+        </div>
+
         <div className="grid gap-3">
           {topPayingLoading
             ? Array.from({ length: 5 }).map((_, i) => (
@@ -186,74 +194,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Quick Browse */}
-      <section className="container mx-auto px-4 py-8 pb-16">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-6 w-1 bg-[#C4A35A] rounded-full" />
-          <h2 className="text-xl font-bold text-[#1B2A4A] flex items-center gap-2">
-            <Search className="h-5 w-5 text-[#C4A35A]" />
-            Browse by Category
-          </h2>
-        </div>
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          {[
-            {
-              icon: Building2,
-              title: "By Company",
-              desc: "Search wages by employer name. Find how much top tech companies, consulting firms, and more pay their H1B workers.",
-              link: "/search?sort=employer_name.asc",
-              linkText: "Browse companies",
-              color: "#1B2A4A",
-              iconBg: "bg-[#1B2A4A]/10",
-            },
-            {
-              icon: DollarSign,
-              title: "By Job Title",
-              desc: "Explore salaries for Software Engineers, Data Scientists, Product Managers, and thousands of other roles.",
-              link: "/search",
-              linkText: "Browse roles",
-              color: "#C41E3A",
-              iconBg: "bg-[#C41E3A]/10",
-            },
-            {
-              icon: MapPin,
-              title: "By Location",
-              desc: "Compare H1B wages across cities and states. See how salaries vary from San Francisco to New York to Austin.",
-              link: "/search",
-              linkText: "Browse locations",
-              color: "#C4A35A",
-              iconBg: "bg-[#C4A35A]/15",
-            },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <Card
-                key={item.title}
-                className="cursor-pointer hover:shadow-lg transition-all duration-200 group border-t-2 hover:-translate-y-1"
-                style={{ borderTopColor: item.color }}
-                onClick={() => router.push(item.link)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${item.iconBg}`}>
-                      <Icon className="h-4 w-4" style={{ color: item.color }} />
-                    </div>
-                    {item.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {item.desc}
-                  </p>
-                  <Button variant="link" className="px-0 mt-3 group-hover:translate-x-1 transition-transform" style={{ color: item.color }}>
-                    {item.linkText} <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
     </div>
   );
 }
