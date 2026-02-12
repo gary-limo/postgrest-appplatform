@@ -1,11 +1,11 @@
 -- PostgREST Production Database Initialization Script
 --
--- Uses PUBLIC schema (DigitalOcean managed databases don't allow CREATE SCHEMA)
--- Uses database default user (managed databases don't allow CREATE ROLE)
+-- Production setup with dedicated schema and 'anon' role
+-- Schema is configurable via variable (default: api) — change in one place
 --
 -- Security is enforced by:
---   - PostgREST read-only config (PGRST_DB_ANON_ROLE = db username with SELECT only grants)
---   - Backend is internal-only (no public URL, only frontend can access)
+--   - Dedicated schema for API exposure (must match PGRST_DB_SCHEMAS in app.yaml)
+--   - anon role: read-only (SELECT only), used by PostgREST for unauthenticated requests
 --
 -- PERFORMANCE NOTE:
 --    Derived tables (h1b_lca_stats, h1b_distinct_*, h1b_state_stats) are
@@ -13,8 +13,20 @@
 --    (see load_h1b_data_production.sql) so every API call reads from a ready
 --    table instead of running expensive aggregations on 451K rows.
 
+-- Schema variable: change this to match PGRST_DB_SCHEMAS in app.yaml
+\set schema api
+
 -- Enable trigram extension for fast ILIKE pattern matching on text columns
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- =============================================================================
+-- SCHEMA AND ROLE (production setup)
+-- =============================================================================
+CREATE SCHEMA IF NOT EXISTS :"schema";
+CREATE ROLE anon NOLOGIN;
+GRANT USAGE ON SCHEMA :"schema" TO anon;
+
+SET search_path TO :"schema";
 
 -- =============================================================================
 -- SOURCE TABLE: H1B LCA Data
@@ -116,12 +128,19 @@ CREATE TABLE IF NOT EXISTS h1b_state_stats (
 CREATE INDEX IF NOT EXISTS idx_ss_code ON h1b_state_stats (state_code);
 CREATE INDEX IF NOT EXISTS idx_ss_count ON h1b_state_stats (filing_count DESC);
 
+-- =============================================================================
+-- GRANTS: anon role gets SELECT only (read-only API)
+-- =============================================================================
+GRANT SELECT ON ALL TABLES IN SCHEMA :"schema" TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA :"schema" GRANT SELECT ON TABLES TO anon;
+GRANT anon TO CURRENT_USER;
+
 -- Log completion
 DO $$
 BEGIN
   RAISE NOTICE 'Production database initialized successfully!';
-  RAISE NOTICE 'Schema: public';
-  RAISE NOTICE 'Using database default user (managed DB)';
+  RAISE NOTICE 'Schema: api (from variable)';
+  RAISE NOTICE 'Role: anon (read-only)';
   RAISE NOTICE '';
   RAISE NOTICE 'Tables created (all pre-computed, no views):';
   RAISE NOTICE '  h1b_lca_data           - Source table (~451K records)';

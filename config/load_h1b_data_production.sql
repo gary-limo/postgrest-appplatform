@@ -1,16 +1,21 @@
 -- =============================================================================
--- H1B LCA Data Loader + Derived Table Population (Production - public schema)
+-- H1B LCA Data Loader + Derived Table Population (Production)
 -- =============================================================================
 -- This script:
 --   1. Loads h1b.csv into h1b_lca_data (source table)
 --   2. Populates all derived tables (pre-computed aggregations)
 --
+-- Schema variable: must match init.production.sql and PGRST_DB_SCHEMAS in app.yaml
+--
 -- USAGE (run from inside the container):
---   psql "$PGRST_DB_URI" -f /app/config/load_h1b_data_production.sql
+--   psql -f /app/config/load_h1b_data_production.sql
 --
 -- NOTE: The \copy command runs client-side, so the CSV file must be on the
 -- machine running psql (baked into Docker image at /app/h1b.csv).
 -- =============================================================================
+
+\set schema api
+SET search_path TO :"schema";
 
 -- =============================================
 -- STEP 1: Load source data

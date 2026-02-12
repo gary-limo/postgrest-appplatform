@@ -72,7 +72,7 @@ services:
       value: ${postgrest-db.DATABASE_URL}
 
     - key: PGRST_DB_SCHEMAS
-      value: public
+      value: api
 
     - key: PGRST_DB_ANON_ROLE
       value: anon
