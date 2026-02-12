@@ -11,12 +11,14 @@
 # Deploy: Connect GitHub repo, DigitalOcean picks up this file automatically
 
 name: postgrest-app
-# region: nyc
+region: nyc
 
 databases:
 - name: postgrest-db
   engine: PG
   version: "16"
+  production: true
+  cluster_name: postgrest-db
 
 jobs:
 - name: db-init
@@ -45,7 +47,7 @@ jobs:
     - key: PGSSLMODE
       value: require
 
-  run_command: "psql -f /app/config/init.production.sql && psql -f /app/config/load_h1b_data_production.sql"
+  run_command: "psql \"${postgrest-db.DATABASE_URL}\" -f /app/config/init.production.sql && psql \"${postgrest-db.DATABASE_URL}\" -f /app/config/load_h1b_data_production.sql"
 
 services:
 - name: postgrest-service
