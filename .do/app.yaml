@@ -5,6 +5,15 @@
 name: postgrest-app
 region: nyc
 
+# Route default URL (/) to frontend — PostgREST is internal-only
+ingress:
+  rules:
+    - component:
+        name: frontend
+      match:
+        path:
+          prefix: /
+
 databases:
 - name: postgrest-db
   engine: PG
@@ -49,7 +58,8 @@ services:
       deploy_on_push: true
 
   dockerfile_path: Dockerfile
-  http_port: 3000
+  internal_ports:
+    - 3000
   instance_size_slug: apps-d-1vcpu-1gb
 
   autoscaling:
@@ -103,7 +113,7 @@ services:
 
   source_dir: frontend
   
-  build_command: npm install && npm run build
+  build_command: npm install --legacy-peer-deps && npm run build
   run_command: npm start
   
   http_port: 3000
