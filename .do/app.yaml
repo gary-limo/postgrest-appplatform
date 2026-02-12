@@ -1,14 +1,6 @@
-# PostgREST Production Deployment
+# PostgREST Deployment
 # RESTful API server powered by PostgreSQL
-#
-# This is the main app spec — auto-detected by DigitalOcean App Platform
-#
-# What it does:
-#   1. Provisions a production PostgreSQL 16 database
-#   2. Runs db-init job: creates tables + loads 451K H1B records
-#   3. Starts PostgREST service with read-only 'anon' role
-#
-# Deploy: Connect GitHub repo, DigitalOcean picks up this file automatically
+# Backend config from App Platform template (working setup)
 
 name: postgrest-app
 region: nyc
@@ -17,8 +9,8 @@ databases:
 - name: postgrest-db
   engine: PG
   version: "16"
-  production: true
-  cluster_name: postgrest-db
+  production: false
+
 
 jobs:
 - name: db-init
@@ -47,7 +39,7 @@ jobs:
     - key: PGSSLMODE
       value: require
 
-  run_command: "psql \"${postgrest-db.DATABASE_URL}\" -f /app/config/init.production.sql && psql \"${postgrest-db.DATABASE_URL}\" -f /app/config/load_h1b_data_production.sql"
+  run_command: "psql -f /app/config/init.production.sql && psql -f /app/config/load_h1b_data_production.sql"
 
 services:
 - name: postgrest-service
@@ -57,8 +49,7 @@ services:
       deploy_on_push: true
 
   dockerfile_path: Dockerfile
-  internal_ports:
-  - 3000
+  http_port: 3000
   instance_size_slug: apps-d-1vcpu-1gb
 
   autoscaling:
@@ -66,7 +57,7 @@ services:
     max_instance_count: 3
     metrics:
       cpu:
-        percent: 85
+        percent: 80
 
   health_check:
     http_path: /
@@ -77,19 +68,15 @@ services:
     failure_threshold: 3
 
   envs:
-    # PostgreSQL connection
     - key: PGRST_DB_URI
       value: ${postgrest-db.DATABASE_URL}
 
-    # Database schema to expose via API
     - key: PGRST_DB_SCHEMAS
-      value: api
+      value: public
 
-    # Read-only role (blocks POST/PATCH/DELETE)
     - key: PGRST_DB_ANON_ROLE
       value: anon
 
-    # Server configuration
     - key: PGRST_SERVER_HOST
       value: "0.0.0.0"
 
@@ -98,6 +85,15 @@ services:
 
     - key: PGRST_LOG_LEVEL
       value: info
+
+    - key: APPPLAT_BASE_TEMPLATE
+      value: postgrest
+
+    - key: APPPLAT_TEMPLATE_TYPE
+      value: production
+
+    - key: APPPLAT_TEMPLATE_COMMIT_SHA
+      value: ${_self.COMMIT_HASH}
 
 - name: frontend
   github:
@@ -112,6 +108,13 @@ services:
   
   http_port: 3000
   instance_size_slug: apps-d-1vcpu-1gb
+
+  autoscaling:
+    min_instance_count: 1
+    max_instance_count: 3
+    metrics:
+      cpu:
+        percent: 85
 
   envs:
     # Backend URL for Next.js rewrites (internal service)

@@ -46,7 +46,7 @@ jobs:
     - key: PGSSLMODE
       value: require
 
-  run_command: "psql \"${postgrest-db.DATABASE_URL}\" -f /app/config/init.production.sql && psql \"${postgrest-db.DATABASE_URL}\" -f /app/config/load_h1b_data_production.sql"
+  run_command: "psql -f /app/config/init.production.sql"
 
 services:
 - name: postgrest-service
